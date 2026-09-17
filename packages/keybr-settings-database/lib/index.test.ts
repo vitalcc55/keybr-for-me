@@ -1,3 +1,6 @@
+import { randomBytes } from "node:crypto";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
 import { test } from "node:test";
 import { DataDir } from "@keybr/config";
 import { Settings, stringProp } from "@keybr/settings";
@@ -6,7 +9,12 @@ import { File } from "@sosimple/fsx-file";
 import { deepEqual, isFalse, isNull } from "rich-assert";
 import { SettingsDatabase } from "./index.ts";
 
-const tmp = process.env.DATA_DIR ?? "/tmp/keybr";
+const tmp =
+  process.env.DATA_DIR ??
+  resolve(
+    tmpdir(),
+    `keybr-settings-database-${randomBytes(6).toString("hex")}`,
+  );
 
 test.beforeEach(async () => {
   await removeDir(tmp);

@@ -1,4 +1,6 @@
-import { join } from "node:path";
+import { randomBytes } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { ResultFaker } from "@keybr/result";
 import { exists, removeDir } from "@sosimple/fsx";
@@ -6,7 +8,9 @@ import { File } from "@sosimple/fsx-file";
 import { isFalse, isTrue } from "rich-assert";
 import { fixFile } from "./fix-file.ts";
 
-const tmp = process.env.DATA_DIR ?? "/tmp/keybr";
+const tmp =
+  process.env.DATA_DIR ??
+  resolve(tmpdir(), `keybr-server-cli-${randomBytes(6).toString("hex")}`);
 
 test.beforeEach(async () => {
   await removeDir(tmp);

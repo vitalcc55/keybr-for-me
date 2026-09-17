@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { test } from "node:test";
 import { DataDir } from "@keybr/config";
 import { PublicId } from "@keybr/publicid";
@@ -9,11 +10,11 @@ test("get file name for user id", () => {
 
   equal(
     factory.getFile(new PublicId(1)).name,
-    "/keybr/user_stats/000/000/000000001",
+    resolve("/keybr", "user_stats", "000", "000", "000000001"),
   );
   equal(
     factory.getFile(new PublicId(123_456_789)).name,
-    "/keybr/user_stats/123/456/123456789",
+    resolve("/keybr", "user_stats", "123", "456", "123456789"),
   );
   throws(() => {
     factory.getFile(PublicId.example1);

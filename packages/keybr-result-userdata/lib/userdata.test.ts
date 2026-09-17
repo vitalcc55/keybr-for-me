@@ -1,4 +1,7 @@
+import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
 import { after, test } from "node:test";
 import { request } from "@fastr/client";
 import { start } from "@fastr/client-testlib";
@@ -17,7 +20,9 @@ import {
 } from "rich-assert";
 import { type UserData, UserDataFactory } from "./index.ts";
 
-const tmp = process.env.DATA_DIR ?? "/tmp/keybr";
+const tmp =
+  process.env.DATA_DIR ??
+  resolve(tmpdir(), `keybr-result-userdata-${randomBytes(6).toString("hex")}`);
 
 test.beforeEach(async () => {
   await removeDir(tmp);

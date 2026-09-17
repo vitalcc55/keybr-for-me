@@ -1,3 +1,6 @@
+import { randomBytes } from "node:crypto";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
 import { test } from "node:test";
 import { DataDir } from "@keybr/config";
 import { Layout } from "@keybr/keyboard";
@@ -7,7 +10,9 @@ import { deepEqual } from "rich-assert";
 import { HighScoresFactory } from "./factory.ts";
 import { type HighScoresRow } from "./highscores.ts";
 
-const tmp = process.env.DATA_DIR ?? "/tmp/keybr";
+const tmp =
+  process.env.DATA_DIR ??
+  resolve(tmpdir(), `keybr-highscores-${randomBytes(6).toString("hex")}`);
 
 test.beforeEach(async () => {
   await removeDir(tmp);

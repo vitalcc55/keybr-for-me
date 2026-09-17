@@ -1,5 +1,5 @@
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { equal, throws } from "rich-assert";
 import { Env } from "./env.ts";
@@ -89,8 +89,8 @@ test("get path", () => {
   );
 
   process.env.A_PATH = "//x//y//.//0//..//z";
-  equal(Env.getPath("A_PATH"), "/x/y/z");
-  equal(Env.getPath("A_PATH", "/a/b/c"), "/x/y/z");
+  equal(Env.getPath("A_PATH"), resolve("//x//y//.//0//..//z"));
+  equal(Env.getPath("A_PATH", "/a/b/c"), resolve("//x//y//.//0//..//z"));
 
   process.env.A_PATH = "x/y/z";
   equal(Env.getPath("A_PATH"), join(process.cwd(), "x/y/z"));

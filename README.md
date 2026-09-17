@@ -1,6 +1,14 @@
-[![CI](https://github.com/aradzie/keybr.com/actions/workflows/ci.yml/badge.svg)](https://github.com/aradzie/keybr.com/actions/workflows/ci.yml)
+[![CI](https://github.com/vitalcc55/keybr-for-me/actions/workflows/ci.yml/badge.svg)](https://github.com/vitalcc55/keybr-for-me/actions/workflows/ci.yml)
 
 # [keybr.com](https://www.keybr.com/) is not (just) a typing test
+
+> This repository is a personal derivative of [aradzie/keybr.com](https://github.com/aradzie/keybr.com), maintained for local use.
+>
+> It is not affiliated with or endorsed by the upstream project. The upstream source and its license notices are retained.
+>
+> Local modifications were made on 2026-09-17 for Windows-native setup, a desktop launcher, and Windows-compatible tests. This derivative is distributed under the [GNU Affero General Public License v3.0](./LICENSE).
+>
+> The launcher and local account setup are intended for a trusted machine and should remain bound to `localhost`.
 
 <p align="center">
     <img src="assets/screenshot.png" alt="screenshot" width="600"/>
@@ -25,7 +33,9 @@ But the devil is in the details — keybr.com offers a few unique features:
 
 ## Can I contribute?
 
-Yes!
+This repository is a personal derivative. For changes intended for the original project, use the [upstream repository](https://github.com/aradzie/keybr.com).
+
+The upstream project welcomes contributions!
 
 * **[Give us a ⭐️.](https://github.com/aradzie/keybr.com)** Help this project gain visibility and stand out.
 * **[Report a bug.](https://github.com/aradzie/keybr.com/issues)** If something is not working, let us know.
@@ -38,4 +48,4 @@ Yes!
 
 ## License
 
-Released under the GNU Affero General Public License v3.0.
+Released under the [GNU Affero General Public License v3.0](./LICENSE).

@@ -4,11 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "homepage": "https://www.keybr.com",
-  "license": "GPL-3",
+  "license": "AGPL-3.0-only",
   "author": "Aliaksandr Radzivanovich <aradzivanovich@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "git@github.com:aradzie/keybr.com.git"
+    "url": "https://github.com/vitalcc55/keybr-for-me.git"
   },
   "workspaces": [
     "packages/*",

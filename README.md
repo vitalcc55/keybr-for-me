@@ -10,6 +10,25 @@
 >
 > The launcher and local account setup are intended for a trusted machine and should remain bound to `localhost`.
 
+For the Windows-local personal workflow, including isolated verification,
+backup/restore, browser acceptance, and the localhost safety limits, see the
+[Windows local runbook](./docs/windows-local-runbook.md).
+
+Минимальный Windows quickstart:
+
+```powershell
+npm ci
+if (-not (Test-Path .\.env)) { Copy-Item .\.env.example .\.env }
+npm run build-dev
+pwsh -NoLogo -NoProfile -File .\tools\launch-keybr.ps1 -Action Start
+pwsh -NoLogo -NoProfile -File .\tools\launch-keybr.ps1 -Action Status
+# после тренировки
+pwsh -NoLogo -NoProfile -File .\tools\launch-keybr.ps1 -Action Stop
+```
+
+Полную изолированную проверку и production/browser сценарии выполняйте по
+[runbook](./docs/windows-local-runbook.md), не используя рабочий `DATA_DIR`.
+
 <p align="center">
     <img src="assets/screenshot.png" alt="screenshot" width="600"/>
 </p>

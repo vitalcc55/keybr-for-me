@@ -1,3 +1,16 @@
-#!/usr/bin/env bash
+#!/usr/bin/env node
 
-node --enable-source-maps --import @keybr/tsl $@
+import { spawnSync } from "node:child_process";
+
+const result = spawnSync(
+  process.execPath,
+  ["--enable-source-maps", "--import", "@keybr/tsl", ...process.argv.slice(2)],
+  { env: process.env, stdio: "inherit" },
+);
+if (result.error != null) {
+  console.error(result.error.message);
+  process.exit(1);
+}
+process.exit(
+  result.status ?? (result.signal === "SIGINT" ? 130 : result.signal === "SIGTERM" ? 143 : 1),
+);

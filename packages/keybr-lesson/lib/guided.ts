@@ -18,6 +18,8 @@ import {
   uniqueWords,
 } from "./text/words.ts";
 
+const STANDARD_RU_LETTER_ORDER = "атиоеёнркслйвьыдумячзжгбпцшщхюфэъ";
+
 export class GuidedLesson extends Lesson {
   readonly dictionary: Dictionary;
 
@@ -143,7 +145,10 @@ export class GuidedLesson extends Lesson {
   }
 
   #getLetters() {
-    const { letters } = this.model;
+    const letters =
+      this.policy.source === "ru-personal"
+        ? standardRussianOrder(this.model.letters)
+        : this.model.letters;
     const { codePoints } = this;
     if (this.settings.get(lessonProps.guided.keyboardOrder)) {
       return Letter.weightedFrequencyOrder(letters, ({ codePoint }) =>
@@ -185,4 +190,19 @@ export class GuidedLesson extends Lesson {
       fallbackUsed: false,
     };
   }
+}
+
+function standardRussianOrder(letters: readonly Letter[]): Letter[] {
+  const order = new Map(
+    [...STANDARD_RU_LETTER_ORDER].map((letter, index) => [
+      letter.codePointAt(0)!,
+      index,
+    ]),
+  );
+  return [...letters].sort(
+    (a, b) =>
+      (order.get(a.codePoint) ?? Number.MAX_SAFE_INTEGER) -
+        (order.get(b.codePoint) ?? Number.MAX_SAFE_INTEGER) ||
+      a.codePoint - b.codePoint,
+  );
 }

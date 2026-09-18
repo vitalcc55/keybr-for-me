@@ -21,6 +21,7 @@
     "test": "tstest --test 'lib/**/*.test.{ts,tsx}'",
     "generate-books": "tsnode ./lib/generate-books.ts",
     "generate-personal": "node --enable-source-maps --import @keybr/tsl ./lib/generate-personal.ts --export",
+    "generate-personal-model": "node --enable-source-maps --import @keybr/tsl ./lib/generate-personal.ts --model",
     "check-personal": "node --enable-source-maps --import @keybr/tsl ./lib/generate-personal.ts --check",
     "generate-languages": "tsnode ./lib/generate-languages.ts",
     "generate-layouts": "tsnode ./lib/generate-layouts.ts"

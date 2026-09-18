@@ -4,6 +4,8 @@ import { getBlacklist } from "./blacklist/blacklist.ts";
 import { type Filter } from "./filter.ts";
 import { PhoneticModel } from "./phoneticmodel.ts";
 
+const maxAttempts = 5;
+
 export function censor(model: PhoneticModel): PhoneticModel {
   const { language, letters } = model;
 
@@ -15,12 +17,13 @@ export function censor(model: PhoneticModel): PhoneticModel {
     }
 
     override nextWord(filter: Filter, random?: RNG): string {
-      while (true) {
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
         const word = model.nextWord(filter, random);
         if (blacklist.allow(word)) {
           return word;
         }
       }
+      return "";
     }
 
     override ngram1(): Ngram1 {

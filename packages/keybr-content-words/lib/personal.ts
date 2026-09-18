@@ -7,6 +7,11 @@ export const PERSONAL_YO_WORD_COUNT = 26;
 export const PERSONAL_ALPHABET = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
 export const PERSONAL_CORPUS_SHA256 =
   "ab09647a03f1c3439e143ff20372c4d864d792ed42a1f59a5db1920bef35e563";
+export const PERSONAL_MODEL_ID = "model-ru-personal";
+export const PERSONAL_MODEL_VERSION = 1;
+export const PERSONAL_MODEL_GENERATOR_VERSION = 1;
+export const PERSONAL_MODEL_ORDER = 4;
+export const PERSONAL_MODEL_WORD_COUNT = 1206;
 
 export type PersonalCorpusManifest = {
   readonly schemaVersion: 1;
@@ -21,6 +26,15 @@ export type PersonalCorpusManifest = {
     readonly issue: 3;
     readonly url: "https://github.com/vitalcc55/keybr-for-me/issues/3";
   };
+};
+
+export type PersonalModelManifest = PersonalCorpusManifest & {
+  readonly modelId: typeof PERSONAL_MODEL_ID;
+  readonly modelVersion: typeof PERSONAL_MODEL_VERSION;
+  readonly modelSha256: string;
+  readonly generatorVersion: typeof PERSONAL_MODEL_GENERATOR_VERSION;
+  readonly order: typeof PERSONAL_MODEL_ORDER;
+  readonly alphabet: typeof PERSONAL_ALPHABET;
 };
 
 export function validatePersonalWordList(words: unknown): string[] {
@@ -139,5 +153,33 @@ export function validatePersonalManifest(
       "https://github.com/vitalcc55/keybr-for-me/issues/3"
   ) {
     throw new TypeError("Personal corpus manifest provenance is invalid.");
+  }
+}
+
+export function validatePersonalModelManifest(
+  manifest: unknown,
+  corpusSha256: string,
+  modelSha256?: string,
+): asserts manifest is PersonalModelManifest {
+  validatePersonalManifest(manifest, corpusSha256);
+  const value = manifest as Record<string, unknown>;
+  if (
+    value.modelId !== PERSONAL_MODEL_ID ||
+    value.modelVersion !== PERSONAL_MODEL_VERSION ||
+    typeof value.modelSha256 !== "string" ||
+    value.modelSha256.length !== 64 ||
+    !/^[0-9a-f]{64}$/u.test(value.modelSha256) ||
+    value.generatorVersion !== PERSONAL_MODEL_GENERATOR_VERSION ||
+    value.order !== PERSONAL_MODEL_ORDER ||
+    value.alphabet !== PERSONAL_ALPHABET
+  ) {
+    throw new TypeError(
+      "Personal model manifest does not match the v1 contract.",
+    );
+  }
+  if (modelSha256 != null && value.modelSha256 !== modelSha256) {
+    throw new TypeError(
+      `Personal model checksum mismatch: expected ${value.modelSha256}, got ${modelSha256}.`,
+    );
   }
 }

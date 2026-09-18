@@ -2,6 +2,7 @@ import { useCollator } from "@keybr/intl";
 import {
   KeyboardContext,
   keyboardProps,
+  Language,
   Layout,
   loadKeyboard,
   useFormattedNames,
@@ -107,11 +108,19 @@ export function ResultGrouper({
       <KeyboardContext.Provider value={keyboard}>
         <PhoneticModelLoader language={selectedLayout.language}>
           {({ letters }) => {
+            const profileLetters =
+              selectedLayout.language === Language.RU &&
+              !letters.some(({ codePoint }) => codePoint === 0x0451)
+                ? [
+                    ...letters,
+                    new Letter(0x0451, 0, Language.RU.letterName(0x0451)),
+                  ]
+                : letters;
             switch (characterClass) {
               case "letters":
                 return children(
                   makeKeyStatsMap(
-                    Letter.restrict(letters, keyboard.getCodePoints()),
+                    Letter.restrict(profileLetters, keyboard.getCodePoints()),
                     group,
                   ),
                 );

@@ -26,6 +26,7 @@ import PL from "@keybr/phonetic-model/assets/model-pl.data";
 import PT from "@keybr/phonetic-model/assets/model-pt.data";
 import RO from "@keybr/phonetic-model/assets/model-ro.data";
 import RU from "@keybr/phonetic-model/assets/model-ru.data";
+import RU_PERSONAL from "@keybr/phonetic-model/assets/model-ru-personal.data";
 import SL from "@keybr/phonetic-model/assets/model-sl.data";
 import SV from "@keybr/phonetic-model/assets/model-sv.data";
 import TH from "@keybr/phonetic-model/assets/model-th.data";
@@ -33,7 +34,18 @@ import TR from "@keybr/phonetic-model/assets/model-tr.data";
 import UK from "@keybr/phonetic-model/assets/model-uk.data";
 import VI from "@keybr/phonetic-model/assets/model-vi.data";
 
-export function modelAssetPath(language: Language): string {
+export type PhoneticModelSource = "standard" | "ru-personal";
+
+export function modelAssetPath(
+  language: Language,
+  source: PhoneticModelSource = "standard",
+): string {
+  if (source === "ru-personal") {
+    if (language !== Language.RU) {
+      throw new Error("The personal phonetic model is available only for RU.");
+    }
+    return RU_PERSONAL;
+  }
   switch (language) {
     case Language.AR:
       return AR;

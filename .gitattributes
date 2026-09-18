@@ -8,3 +8,4 @@ yarn.lock                       text eol=lf -diff -merge
 
 # Generated personal corpus export is byte-checked and intentionally has no final LF.
 packages/keybr-content-words/lib/data/words-ru-personal.txt -text linguist-generated=true
+packages/keybr-phonetic-model/assets/model-ru-personal.data -text linguist-generated=true

@@ -135,3 +135,4 @@
 ## Progress log
 
 - 2026-09-18 — этапы #2 и #3 реализованы в этой ветке и прошли последний read-only review без новых actionable findings после исправлений. Подтверждены loopback/ownership/data-safety focused checks, isolated test profiles, exact personal corpus, checksum, manifest и byte-level export. Следующий этап — #4: добавить `ё` в персональную фонетическую модель, не изменяя штатные assets.
+- 2026-09-18 — этап #4 реализован и прошёл профильный read-only review-loop. Добавлены canonical `ё`, отдельная deterministic personal model из 1206 слов, manifest/raw-SHA проверка, явный RU-only loader variant, display-only `ё` в профиле и bounded censor; штатная модель/раскладка/статистическая identity сохранены. Focused tests, compile и loader/profile checks зелёные; следующий этап — #5 (источник в Guided/Word List).

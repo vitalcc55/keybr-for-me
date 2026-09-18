@@ -6,19 +6,27 @@ import {
   PhoneticModelContext,
 } from "@keybr/phonetic-model";
 import { type ReactNode, useEffect, useState } from "react";
+import { type PhoneticModelSource } from "./assets.ts";
 import { loaderImpl } from "./loader.ts";
 
 export function PhoneticModelLoader({
   language,
+  source = "standard",
   children,
   fallback = <LoadingProgress />,
 }: {
   readonly language: Language;
+  readonly source?: PhoneticModelSource;
   readonly children: (result: PhoneticModel) => ReactNode;
   readonly fallback?: ReactNode;
 }): ReactNode {
   return (
-    <Loader key={language.id} language={language} fallback={fallback}>
+    <Loader
+      key={`${language.id}:${source}`}
+      language={language}
+      source={source}
+      fallback={fallback}
+    >
       {children}
     </Loader>
   );
@@ -30,14 +38,16 @@ export namespace PhoneticModelLoader {
 
 function Loader({
   language,
+  source,
   children,
   fallback,
 }: {
   readonly language: Language;
+  readonly source: PhoneticModelSource;
   readonly children: (result: PhoneticModel) => ReactNode;
   readonly fallback?: ReactNode;
 }): ReactNode {
-  const result = useLoader(language);
+  const result = useLoader(language, source);
   if (result == null) {
     return fallback;
   } else {
@@ -49,13 +59,16 @@ function Loader({
   }
 }
 
-function useLoader(language: Language): PhoneticModel | null {
+function useLoader(
+  language: Language,
+  source: PhoneticModelSource,
+): PhoneticModel | null {
   const [result, setResult] = useState<PhoneticModel | null>(null);
 
   useEffect(() => {
     let didCancel = false;
 
-    PhoneticModelLoader.loader(language)
+    PhoneticModelLoader.loader(language, source)
       .then((result) => {
         if (!didCancel) {
           setResult(result);
@@ -66,7 +79,7 @@ function useLoader(language: Language): PhoneticModel | null {
     return () => {
       didCancel = true;
     };
-  }, [language]);
+  }, [language, source]);
 
   return result;
 }

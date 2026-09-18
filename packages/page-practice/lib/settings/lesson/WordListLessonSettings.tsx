@@ -34,7 +34,7 @@ export function WordListLessonSettings({
         <Description>
           <FormattedMessage
             id="lessonType.wordList.description"
-            defaultMessage="Generate typing lessons from the list of the most common words of your language. All keys are included by default. This mode is for the pros."
+            defaultMessage="Generate typing lessons only from the selected word list. All keys are included by default; unlike Guided, this strict mode never adds pseudo-words."
           />
         </Description>
       </Explainer>

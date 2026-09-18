@@ -6,7 +6,7 @@ import { type KeyStatsMap } from "@keybr/result";
 import { type Settings } from "@keybr/settings";
 import { filterWordList } from "./dictionary.ts";
 import { LessonKeys } from "./key.ts";
-import { Lesson } from "./lesson.ts";
+import { Lesson, lessonUnavailable } from "./lesson.ts";
 import { lessonProps } from "./settings.ts";
 import { Target } from "./target.ts";
 import { generateFragment } from "./text/fragment.ts";
@@ -59,6 +59,13 @@ export class WordListLesson extends Lesson {
     );
     return generateFragment(this.settings, words, {
       repeatWords: this.settings.get(lessonProps.repeatWords),
+      unavailable: lessonUnavailable(
+        "word-list",
+        false,
+        "empty-word-list",
+        "word-list",
+        this.filteredWordCount,
+      ),
     });
   }
 }

@@ -162,6 +162,23 @@ test("personal policy keeps the full filtered pool", () => {
   deepEqual(lesson.wordList, ["всё", "нёбо", "и"]);
 });
 
+test("empty filtered word list is unavailable", () => {
+  const settings = new Settings();
+  const keyboard = loadKeyboard(Layout.EN_US);
+  const model = new FakePhoneticModel();
+  const lesson = new WordListLesson(settings, keyboard, model, ["こんにちは"]);
+  const lessonKeys = lesson.update(makeKeyStatsMap(lesson.letters, []));
+
+  deepEqual(lesson.generate(lessonKeys, model.rng), {
+    kind: "unavailable",
+    origin: "word-list",
+    fallbackUsed: false,
+    reason: "empty-word-list",
+    action: "word-list",
+    candidateCount: 0,
+  });
+});
+
 test("word-list source and limit reject invalid persisted values", () => {
   throws(
     () =>

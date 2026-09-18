@@ -1,3 +1,4 @@
+import { throws } from "node:assert/strict";
 import { describe, it, test } from "node:test";
 import { Layout, loadKeyboard } from "@keybr/keyboard";
 import { FakePhoneticModel } from "@keybr/phonetic-model";
@@ -140,6 +141,56 @@ test("filter words", () => {
   const lesson = new WordListLesson(settings, keyboard, model, wordList);
 
   deepEqual(lesson.wordList, ["abc", "def"]);
+});
+
+test("personal policy keeps the full filtered pool", () => {
+  const settings = new Settings();
+  const keyboard = loadKeyboard(Layout.RU_RU);
+  const model = new FakePhoneticModel();
+  const lesson = new WordListLesson(
+    settings,
+    keyboard,
+    model,
+    ["всё", "нёбо", "и"],
+    {
+      source: "ru-personal",
+      limit: "all",
+      naturalWordLimit: null,
+    },
+  );
+
+  deepEqual(lesson.wordList, ["всё", "нёбо", "и"]);
+});
+
+test("word-list source and limit reject invalid persisted values", () => {
+  throws(
+    () =>
+      new Settings({ "lesson.wordList.source": "unknown" }).get(
+        lessonProps.wordList.source,
+      ),
+    /Unknown word-list source/,
+  );
+  throws(
+    () =>
+      new Settings({ "lesson.wordList.limit": 1.5 }).get(
+        lessonProps.wordList.limit,
+      ),
+    /Invalid word-list limit/,
+  );
+  throws(
+    () =>
+      new Settings({ "lesson.wordList.limit": null }).get(
+        lessonProps.wordList.limit,
+      ),
+    /Invalid word-list limit/,
+  );
+  throws(
+    () =>
+      new Settings({ "lesson.wordList.source": null }).get(
+        lessonProps.wordList.source,
+      ),
+    /Unknown word-list source/,
+  );
 });
 
 describe("generate randomized text using settings", () => {

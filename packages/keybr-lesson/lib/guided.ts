@@ -1,4 +1,4 @@
-import { type WordList } from "@keybr/content";
+import { type WordList, type WordListPolicy } from "@keybr/content";
 import { type Keyboard } from "@keybr/keyboard";
 import { Filter, Letter, type PhoneticModel } from "@keybr/phonetic-model";
 import { type RNGStream } from "@keybr/rand";
@@ -25,6 +25,11 @@ export class GuidedLesson extends Lesson {
     keyboard: Keyboard,
     model: PhoneticModel,
     wordList: WordList,
+    readonly policy: WordListPolicy = {
+      source: "ru-standard",
+      limit: 1000,
+      naturalWordLimit: 1000,
+    },
   ) {
     super(settings, keyboard, model);
     this.dictionary = new Dictionary(
@@ -143,7 +148,10 @@ export class GuidedLesson extends Lesson {
   #makeWordGenerator(filter: Filter, rng: RNGStream) {
     const pseudoWords = phoneticWords(this.model, filter, rng);
     if (this.settings.get(lessonProps.guided.naturalWords)) {
-      const words = this.dictionary.find(filter).slice(0, 1000);
+      const words = [...this.dictionary.find(filter)];
+      if (this.policy?.naturalWordLimit != null) {
+        words.splice(1000);
+      }
       while (words.length < 15) {
         const word = pseudoWords();
         if (word != null) {

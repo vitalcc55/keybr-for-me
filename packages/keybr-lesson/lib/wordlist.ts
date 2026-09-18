@@ -1,4 +1,4 @@
-import { type WordList } from "@keybr/content";
+import { type WordList, type WordListPolicy } from "@keybr/content";
 import { type Keyboard } from "@keybr/keyboard";
 import { Letter, type PhoneticModel } from "@keybr/phonetic-model";
 import { type RNGStream } from "@keybr/rand";
@@ -14,19 +14,27 @@ import { mangledWords, randomWords, uniqueWords } from "./text/words.ts";
 
 export class WordListLesson extends Lesson {
   readonly wordList: WordList;
+  readonly filteredWordCount: number;
 
   constructor(
     settings: Settings,
     keyboard: Keyboard,
     model: PhoneticModel,
     wordList: WordList,
+    readonly policy: WordListPolicy = {
+      source: "ru-standard",
+      limit: settings.get(lessonProps.wordList.wordListSize),
+      naturalWordLimit: 1000,
+    },
   ) {
     super(settings, keyboard, model);
-    const wordListSize = settings.get(lessonProps.wordList.wordListSize);
+    const limit = policy.limit;
     const longWordsOnly = settings.get(lessonProps.wordList.longWordsOnly);
-    this.wordList = filterWordList(wordList, this.codePoints)
-      .filter((word) => !longWordsOnly || word.length > 3)
-      .slice(0, wordListSize);
+    const filtered = filterWordList(wordList, this.codePoints).filter(
+      (word) => !longWordsOnly || word.length > 3,
+    );
+    this.filteredWordCount = filtered.length;
+    this.wordList = limit === "all" ? filtered : filtered.slice(0, limit);
   }
 
   override get letters() {

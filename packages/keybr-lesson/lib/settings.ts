@@ -1,6 +1,8 @@
 import { Syntax } from "@keybr/code";
+import { type WordListLimit, type WordListSource } from "@keybr/content";
 import { Book } from "@keybr/content";
 import {
+  type AnyProp,
   booleanProp,
   flagsProp,
   itemProp,
@@ -8,6 +10,58 @@ import {
   stringProp,
 } from "@keybr/settings";
 import { LessonType } from "./lessontype.ts";
+
+const wordListSourceProp: AnyProp<WordListSource> = {
+  key: "lesson.wordList.source",
+  defaultValue: "ru-personal",
+  preserveNull: true,
+  toJson(value) {
+    validateWordListSource(value);
+    return value;
+  },
+  fromJson(value, defaultValue = "ru-personal") {
+    if (value === undefined) {
+      return defaultValue;
+    }
+    validateWordListSource(value);
+    return value;
+  },
+};
+
+const wordListLimitProp: AnyProp<WordListLimit> = {
+  key: "lesson.wordList.limit",
+  defaultValue: "inherit",
+  preserveNull: true,
+  toJson(value) {
+    validateWordListLimit(value);
+    return value;
+  },
+  fromJson(value, defaultValue = "inherit") {
+    if (value === undefined) {
+      return defaultValue;
+    }
+    validateWordListLimit(value);
+    return value;
+  },
+};
+
+function validateWordListSource(
+  value: unknown,
+): asserts value is WordListSource {
+  if (value !== "ru-standard" && value !== "ru-personal") {
+    throw new TypeError(`Unknown word-list source: ${String(value)}`);
+  }
+}
+
+function validateWordListLimit(value: unknown): asserts value is WordListLimit {
+  if (
+    value !== "inherit" &&
+    value !== "all" &&
+    (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1)
+  ) {
+    throw new TypeError(`Invalid word-list limit: ${String(value)}`);
+  }
+}
 
 export const lessonProps = {
   type: itemProp("lesson.type", LessonType.ALL, LessonType.GUIDED),
@@ -22,6 +76,8 @@ export const lessonProps = {
     recoverKeys: booleanProp("lesson.guided.recoverKeys", false),
   } as const,
   wordList: {
+    source: wordListSourceProp,
+    limit: wordListLimitProp,
     wordListSize: numberProp("lesson.wordList.wordListSize", 1000, {
       min: 10,
       max: 1000,

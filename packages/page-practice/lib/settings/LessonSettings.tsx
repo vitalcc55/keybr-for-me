@@ -22,6 +22,7 @@ import { GuidedLessonSettings } from "./lesson/GuidedLessonSettings.tsx";
 import { LessonPreview } from "./lesson/LessonPreview.tsx";
 import { NumbersLessonSettings } from "./lesson/NumbersLessonSettings.tsx";
 import { WordListLessonSettings } from "./lesson/WordListLessonSettings.tsx";
+import { WordListSourceSettings } from "./lesson/WordListSourceSettings.tsx";
 
 export function LessonSettings(): ReactNode {
   const { formatMessage } = useIntl();
@@ -73,6 +74,7 @@ export function LessonSettings(): ReactNode {
           })}
         />
       </TabList>
+      <WordListSourceSettings lessonType={settings.get(lessonProps.type)} />
       <LessonLoader>
         {(lesson) => (
           <>

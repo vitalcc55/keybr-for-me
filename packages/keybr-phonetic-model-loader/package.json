@@ -11,7 +11,8 @@
     "@keybr/keyboard": "*",
     "@keybr/pages-shared": "*",
     "@keybr/phonetic-model": "*",
-    "@keybr/request": "*"
+    "@keybr/request": "*",
+    "@keybr/widget": "*"
   },
   "devDependencies": {},
   "scripts": {

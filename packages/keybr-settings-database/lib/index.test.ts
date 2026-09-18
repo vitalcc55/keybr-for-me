@@ -9,12 +9,10 @@ import { File } from "@sosimple/fsx-file";
 import { deepEqual, isFalse, isNull } from "rich-assert";
 import { SettingsDatabase } from "./index.ts";
 
-const tmp =
-  process.env.DATA_DIR ??
-  resolve(
-    tmpdir(),
-    `keybr-settings-database-${randomBytes(6).toString("hex")}`,
-  );
+const tmp = resolve(
+  tmpdir(),
+  `keybr-settings-database-${randomBytes(6).toString("hex")}`,
+);
 
 test.beforeEach(async () => {
   await removeDir(tmp);

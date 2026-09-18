@@ -49,7 +49,11 @@ export class ErrorHandler implements HandlerObject {
 
   handleError(ctx: Context, err: Error) {
     const { method, url, headers } = ctx.request.req;
-    const req = { method, url, headers };
+    const req = {
+      method,
+      url: redactUrl(url),
+      headers: redactHeaders(headers),
+    };
     if (err instanceof ApplicationError) {
       Logger.debug(err, "Application error", req);
       const { status, body } = err;
@@ -99,4 +103,28 @@ export class ErrorHandler implements HandlerObject {
         break;
     }
   }
+}
+
+function redactUrl(url: string | undefined): string | undefined {
+  if (url == null) {
+    return url;
+  }
+  const queryIndex = url.indexOf("?");
+  const path = queryIndex < 0 ? url : url.substring(0, queryIndex);
+  return (
+    path.replace(/(\/login\/)[^/?#]+/gi, "$1<redacted>") +
+    (queryIndex < 0 ? "" : "?<redacted>")
+  );
+}
+
+function redactHeaders(
+  headers: Record<string, string | string[] | undefined>,
+): Record<string, string | string[] | undefined> {
+  return Object.fromEntries(
+    Object.entries(headers).map(([name, value]) =>
+      /^(?:authorization|cookie|proxy-authorization|referer)$/i.test(name)
+        ? [name, "<redacted>"]
+        : [name, value],
+    ),
+  );
 }

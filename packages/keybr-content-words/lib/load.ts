@@ -1,7 +1,37 @@
-import { type WordList } from "@keybr/content";
+import {
+  type WordList,
+  type WordListDescriptor,
+  type WordListLimit,
+  type WordListPolicy,
+  type WordListSource,
+} from "@keybr/content";
 import { Language } from "@keybr/keyboard";
+import personalManifest from "./data/words-ru-personal.manifest.json" with { type: "json" };
+import {
+  PERSONAL_CORPUS_SHA256,
+  PERSONAL_CORPUS_VERSION,
+  PERSONAL_WORD_COUNT,
+  PERSONAL_WORD_LIST_ID,
+} from "./personal.ts";
 
-export async function loadWordList(language: Language): Promise<WordList> {
+export async function loadWordList(
+  language: Language,
+  source: WordListSource = "ru-standard",
+): Promise<WordList> {
+  if (source !== "ru-standard" && source !== "ru-personal") {
+    throw new TypeError(`Unknown word-list source: ${String(source)}`);
+  }
+  if (source === "ru-personal") {
+    if (language !== Language.RU) {
+      throw new TypeError("The personal word list is available only for RU.");
+    }
+    return (
+      await import(
+        /* webpackChunkName: "words-ru-personal" */ "./data/words-ru-personal.json",
+        { with: { type: "json" } }
+      )
+    ).default;
+  }
   switch (language) {
     case Language.AR:
       return (
@@ -237,4 +267,92 @@ export async function loadWordList(language: Language): Promise<WordList> {
     default:
       throw new Error();
   }
+}
+
+export function resolveWordListDescriptor(
+  language: Language,
+  source: WordListSource,
+): WordListDescriptor {
+  if (source !== "ru-standard" && source !== "ru-personal") {
+    throw new TypeError(`Unknown word-list source: ${String(source)}`);
+  }
+  if (source === "ru-personal") {
+    if (language !== Language.RU) {
+      throw new TypeError("The personal word list is available only for RU.");
+    }
+    return {
+      source,
+      languageId: "ru",
+      wordListId: PERSONAL_WORD_LIST_ID,
+      wordCount: PERSONAL_WORD_COUNT,
+      corpusVersion: PERSONAL_CORPUS_VERSION,
+      corpusSha256: PERSONAL_CORPUS_SHA256,
+      model: {
+        id: personalManifest.modelId,
+        version: personalManifest.modelVersion,
+        sha256: personalManifest.modelSha256,
+      },
+    };
+  }
+  return {
+    source,
+    languageId: language.id,
+    wordListId: `words-${language.id}`,
+    wordCount: null,
+    corpusVersion: null,
+    corpusSha256: null,
+    model: null,
+  };
+}
+
+export function wordListDescriptorIdentity(
+  descriptor: WordListDescriptor,
+): string {
+  const model = descriptor.model;
+  return [
+    descriptor.source,
+    descriptor.languageId,
+    descriptor.wordListId,
+    descriptor.corpusVersion ?? "legacy",
+    descriptor.corpusSha256 ?? "legacy",
+    model?.id ?? "legacy",
+    model?.version ?? "legacy",
+    model?.sha256 ?? "legacy",
+  ].join(":");
+}
+
+export function resolveWordListPolicy(
+  descriptor: WordListDescriptor,
+  limit: WordListLimit,
+  legacySize: number,
+): WordListPolicy {
+  const effectiveLimit =
+    limit === "inherit"
+      ? descriptor.source === "ru-personal"
+        ? "all"
+        : legacySize
+      : limit;
+  if (effectiveLimit === "all") {
+    if (descriptor.source !== "ru-personal") {
+      throw new TypeError(
+        "The all-words limit is available only for RU personal words.",
+      );
+    }
+  } else if (
+    !Number.isSafeInteger(effectiveLimit) ||
+    effectiveLimit < 1 ||
+    (descriptor.source === "ru-personal"
+      ? effectiveLimit > (descriptor.wordCount ?? 0)
+      : effectiveLimit > 1000)
+  ) {
+    throw new TypeError("The word-list limit is outside the available pool.");
+  }
+  return {
+    source: descriptor.source,
+    limit: effectiveLimit,
+    naturalWordLimit: descriptor.source === "ru-personal" ? null : 1000,
+    identity: wordListDescriptorIdentity(descriptor),
+    sourceTotal: descriptor.wordCount,
+    sourceVersion: descriptor.corpusVersion,
+  };
 }

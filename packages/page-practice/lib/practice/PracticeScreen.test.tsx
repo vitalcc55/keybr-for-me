@@ -33,3 +33,32 @@ test("render", async () => {
 
   r.unmount();
 });
+
+test("render unavailable Guided generation", async () => {
+  PhoneticModelLoader.loader = async () => new FakePhoneticModel([""]);
+
+  const r = render(
+    <FakeIntlProvider>
+      <FakeSettingsContext
+        initialSettings={new Settings().set(
+          lessonProps.guided.naturalWords,
+          false,
+        )}
+      >
+        <FakeResultContext initialResults={faker.nextResultList(10)}>
+          <PracticeScreen />
+        </FakeResultContext>
+      </FakeSettingsContext>
+    </FakeIntlProvider>,
+  );
+
+  isNotNull(
+    await r.findByText(
+      "Guided could not generate a usable word for the current weak-key focus.",
+    ),
+  );
+  isNotNull(await r.findByRole("button", { name: "Try again" }));
+  isNotNull(await r.findByRole("button", { name: "Open lesson settings" }));
+
+  r.unmount();
+});

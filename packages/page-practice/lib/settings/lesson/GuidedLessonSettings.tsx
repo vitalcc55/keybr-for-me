@@ -23,7 +23,7 @@ export function GuidedLessonSettings({
         <Description>
           <FormattedMessage
             id="lessonType.guided.description"
-            defaultMessage="Generate typing lessons with random words using the phonetic rules of your language. The key set is expanded dynamically based on your performance. This mode is for the beginners."
+            defaultMessage="Generate typing lessons with random words using the phonetic rules of your language. The key set is expanded dynamically based on your performance, and pseudo-words may supplement the dictionary when the focused key has too few matches. This mode is for the beginners."
           />
         </Description>
       </Explainer>

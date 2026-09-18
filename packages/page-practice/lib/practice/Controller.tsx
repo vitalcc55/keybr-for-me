@@ -1,4 +1,5 @@
 import { type KeyId, useKeyboard } from "@keybr/keyboard";
+import { isLessonUnavailable } from "@keybr/lesson";
 import { type Result } from "@keybr/result";
 import { type LineList } from "@keybr/textinput";
 import { addKey, deleteKey, emulateLayout } from "@keybr/textinput-events";
@@ -28,11 +29,18 @@ export const Controller = memo(function Controller({
   const {
     state,
     handleResetLesson,
-    handleSkipLesson,
+    handleSkipLesson: skipLesson,
     handleKeyDown,
     handleKeyUp,
     handleInput,
   } = useLessonState(progress, onResult);
+  const [retryKey, setRetryKey] = useState(0);
+  const [retryFromUnavailable, setRetryFromUnavailable] = useState(false);
+  const handleSkipLesson = () => {
+    setRetryFromUnavailable(isLessonUnavailable(state.generation));
+    setRetryKey((value) => value + 1);
+    skipLesson();
+  };
   useHotkeys({
     ["Ctrl+ArrowLeft"]: handleResetLesson,
     ["Ctrl+ArrowRight"]: handleSkipLesson,
@@ -44,6 +52,8 @@ export const Controller = memo(function Controller({
   return (
     <Presenter
       state={state}
+      retryKey={retryKey}
+      retryFromUnavailable={retryFromUnavailable}
       lines={state.lines}
       depressedKeys={state.depressedKeys}
       onResetLesson={handleResetLesson}

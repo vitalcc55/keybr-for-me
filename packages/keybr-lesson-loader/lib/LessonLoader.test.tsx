@@ -1,5 +1,12 @@
 import { test } from "node:test";
-import { KeyboardContext, Layout, loadKeyboard } from "@keybr/keyboard";
+import {
+  KeyboardContext,
+  KeyboardOptions,
+  Language,
+  Layout,
+  loadKeyboard,
+} from "@keybr/keyboard";
+import { type GuidedLesson } from "@keybr/lesson";
 import { FakePhoneticModel, type PhoneticModel } from "@keybr/phonetic-model";
 import { PhoneticModelLoader } from "@keybr/phonetic-model-loader";
 import { FakeSettingsContext, Settings } from "@keybr/settings";
@@ -22,6 +29,41 @@ test("load", async () => {
   );
 
   includes((await r.findByTitle("letters")).textContent!, "ABCDEFGHIJ");
+
+  r.unmount();
+});
+
+test("RU defaults to the personal word-list/model source", async () => {
+  let source = "";
+  PhoneticModelLoader.loader = async (_language, modelSource) => {
+    source = modelSource ?? "";
+    return new FakePhoneticModel();
+  };
+  const options = KeyboardOptions.default()
+    .withLanguage(Language.RU)
+    .withLayout(Layout.RU_RU);
+  const settings = options.save(new Settings());
+  const keyboard = loadKeyboard(Layout.RU_RU);
+
+  const r = render(
+    <FakeSettingsContext initialSettings={settings}>
+      <KeyboardContext.Provider value={keyboard}>
+        <LessonLoader>
+          {(lesson) => (
+            <>
+              <span title="source">{source}</span>
+              <span title="last-word">
+                {[...(lesson as GuidedLesson).dictionary].at(-1)}
+              </span>
+            </>
+          )}
+        </LessonLoader>
+      </KeyboardContext.Provider>
+    </FakeSettingsContext>,
+  );
+
+  includes((await r.findByTitle("source")).textContent!, "ru-personal");
+  includes((await r.findByTitle("last-word")).textContent!, "нёбо");
 
   r.unmount();
 });

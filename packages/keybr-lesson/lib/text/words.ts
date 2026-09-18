@@ -5,8 +5,25 @@ import {
   type PhoneticModel,
 } from "@keybr/phonetic-model";
 import { randomSample, type RNG, weightedRandomSample } from "@keybr/rand";
+import { toCodePoints } from "@keybr/unicode";
 
 export type WordGenerator = () => string | "" | null;
+
+export function isValidCandidate(
+  word: string | null | undefined,
+  filter: Filter,
+): word is string {
+  if (word == null || word === "") {
+    return false;
+  }
+  const codePoints = [...toCodePoints(word)];
+  return (
+    codePoints.length >= 3 &&
+    codePoints.every((codePoint) => filter.includes(codePoint)) &&
+    (filter.focusedCodePoint == null ||
+      codePoints.includes(filter.focusedCodePoint))
+  );
+}
 
 export function phoneticWords(
   model: PhoneticModel,
@@ -14,7 +31,8 @@ export function phoneticWords(
   random: RNG,
 ): WordGenerator {
   return () => {
-    return model.nextWord(filter, random) || null;
+    const word = model.nextWord(filter, random);
+    return isValidCandidate(word, filter) ? word : null;
   };
 }
 
@@ -112,7 +130,13 @@ export function mangledWords(
           word = `${word},`;
           break;
         case 45:
-          word = `${word}-${nextWord()}`;
+          {
+            const next = nextWord();
+            if (next == null || next === "") {
+              return null;
+            }
+            word = `${word}-${next}`;
+          }
           break;
         case 46:
           word = `${word}.`;

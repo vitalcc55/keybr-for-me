@@ -1,4 +1,5 @@
 import { type KeyId } from "@keybr/keyboard";
+import { isLessonUnavailable, type LessonUnavailable } from "@keybr/lesson";
 import { names } from "@keybr/lesson-ui";
 import { Screen } from "@keybr/pages-shared";
 import { enumProp, Preferences } from "@keybr/settings";
@@ -9,8 +10,9 @@ import {
   ModifierState,
 } from "@keybr/textinput-events";
 import { TextArea } from "@keybr/textinput-ui";
-import { type Focusable, Zoomer } from "@keybr/widget";
-import { createRef, PureComponent, type ReactNode } from "react";
+import { type Focusable, ViewContext, Zoomer } from "@keybr/widget";
+import { createRef, PureComponent, type ReactNode, useContext } from "react";
+import { LessonUnavailableMessage } from "../LessonUnavailableMessage.tsx";
 import { Controls } from "./Controls.tsx";
 import { Indicators } from "./Indicators.tsx";
 import { DeferredKeyboardPresenter } from "./KeyboardPresenter.tsx";
@@ -20,6 +22,8 @@ import { type LessonState } from "./state/index.ts";
 
 type Props = {
   readonly state: LessonState;
+  readonly retryKey: number;
+  readonly retryFromUnavailable: boolean;
   readonly lines: LineList;
   readonly depressedKeys: readonly KeyId[];
   readonly onResetLesson: () => void;
@@ -72,6 +76,16 @@ export class Presenter extends PureComponent<Props, State> {
     }
   }
 
+  override componentDidUpdate(previousProps: Props) {
+    if (
+      previousProps.retryKey !== this.props.retryKey &&
+      this.props.retryFromUnavailable &&
+      !isLessonUnavailable(this.props.state.generation)
+    ) {
+      this.focusRef.current?.focus();
+    }
+  }
+
   override render() {
     const {
       props: { state, lines, depressedKeys },
@@ -87,6 +101,14 @@ export class Presenter extends PureComponent<Props, State> {
       handleHelp,
       handleTourClose,
     } = this;
+    if (isLessonUnavailable(state.generation)) {
+      return (
+        <UnavailableScreen
+          unavailable={state.generation}
+          onRetry={handleSkipLesson}
+        />
+      );
+    }
     switch (view) {
       case View.Normal:
         return (
@@ -278,6 +300,25 @@ export class Presenter extends PureComponent<Props, State> {
       },
     );
   };
+}
+
+function UnavailableScreen({
+  unavailable,
+  onRetry,
+}: {
+  readonly unavailable: LessonUnavailable;
+  readonly onRetry: () => void;
+}): ReactNode {
+  const { setView } = useContext(ViewContext);
+  return (
+    <Screen>
+      <LessonUnavailableMessage
+        unavailable={unavailable}
+        onRetry={onRetry}
+        onSettings={() => setView("settings")}
+      />
+    </Screen>
+  );
 }
 
 function NormalLayout({

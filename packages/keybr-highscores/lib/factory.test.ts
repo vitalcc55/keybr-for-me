@@ -10,9 +10,10 @@ import { deepEqual } from "rich-assert";
 import { HighScoresFactory } from "./factory.ts";
 import { type HighScoresRow } from "./highscores.ts";
 
-const tmp =
-  process.env.DATA_DIR ??
-  resolve(tmpdir(), `keybr-highscores-${randomBytes(6).toString("hex")}`);
+const tmp = resolve(
+  tmpdir(),
+  `keybr-highscores-${randomBytes(6).toString("hex")}`,
+);
 
 test.beforeEach(async () => {
   await removeDir(tmp);

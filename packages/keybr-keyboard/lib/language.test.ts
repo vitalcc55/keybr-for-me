@@ -18,6 +18,14 @@ test("check words", () => {
   isFalse(Language.EN.test("абвгде"));
 });
 
+test("Russian alphabet includes ё in canonical order", () => {
+  equal(
+    String.fromCodePoint(...Language.RU.alphabet),
+    "абвгдеёжзийклмнопрстуфхцчшщъыьэюя",
+  );
+  isTrue(Language.RU.test("всё"));
+});
+
 test("letter name", () => {
   equal(Language.EN.letterName(0x0069), "I");
   equal(Language.TR.letterName(0x0069), "İ");

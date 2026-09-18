@@ -1,4 +1,4 @@
-import { type WordList } from "@keybr/content";
+import { type WordList, type WordListPolicy } from "@keybr/content";
 import { type Keyboard } from "@keybr/keyboard";
 import { Filter, Letter, type PhoneticModel } from "@keybr/phonetic-model";
 import { type RNGStream } from "@keybr/rand";
@@ -6,11 +6,12 @@ import { type KeyStatsMap } from "@keybr/result";
 import { type Settings } from "@keybr/settings";
 import { Dictionary, filterWordList } from "./dictionary.ts";
 import { LessonKey, LessonKeys } from "./key.ts";
-import { Lesson } from "./lesson.ts";
+import { Lesson, lessonUnavailable } from "./lesson.ts";
 import { lessonProps } from "./settings.ts";
 import { Target } from "./target.ts";
 import { generateFragment } from "./text/fragment.ts";
 import {
+  isValidCandidate,
   mangledWords,
   phoneticWords,
   randomWords,
@@ -25,6 +26,11 @@ export class GuidedLesson extends Lesson {
     keyboard: Keyboard,
     model: PhoneticModel,
     wordList: WordList,
+    readonly policy: WordListPolicy = {
+      source: "ru-standard",
+      limit: 1000,
+      naturalWordLimit: 1000,
+    },
   ) {
     super(settings, keyboard, model);
     this.dictionary = new Dictionary(
@@ -112,7 +118,8 @@ export class GuidedLesson extends Lesson {
       lessonKeys.findIncludedKeys(),
       lessonKeys.findFocusedKey(),
     );
-    const wordGenerator = this.#makeWordGenerator(filter, rng);
+    const { wordGenerator, fallbackUsed, candidateCount } =
+      this.#makeWordGenerator(filter, rng);
     const words = mangledWords(
       uniqueWords(wordGenerator),
       this.model.language,
@@ -125,6 +132,13 @@ export class GuidedLesson extends Lesson {
     );
     return generateFragment(this.settings, words, {
       repeatWords: this.settings.get(lessonProps.repeatWords),
+      unavailable: lessonUnavailable(
+        "guided",
+        fallbackUsed,
+        "no-valid-candidates",
+        "settings",
+        candidateCount,
+      ),
     });
   }
 
@@ -143,20 +157,32 @@ export class GuidedLesson extends Lesson {
   #makeWordGenerator(filter: Filter, rng: RNGStream) {
     const pseudoWords = phoneticWords(this.model, filter, rng);
     if (this.settings.get(lessonProps.guided.naturalWords)) {
-      const words = this.dictionary.find(filter).slice(0, 1000);
-      while (words.length < 15) {
+      const words = this.dictionary
+        .find(filter)
+        .filter((word) => isValidCandidate(word, filter));
+      if (this.policy.naturalWordLimit != null) {
+        words.splice(this.policy.naturalWordLimit);
+      }
+      const candidateCount = words.length;
+      const fallbackUsed = words.length < 15;
+      const maxFallbackAttempts = 15;
+      let fallbackAttempts = 0;
+      while (words.length < 15 && fallbackAttempts < maxFallbackAttempts) {
+        fallbackAttempts++;
         const word = pseudoWords();
         if (word != null) {
           words.push(word);
-        } else {
-          break;
         }
       }
-      if (words.length === 0) {
-        words.push("?");
-      }
-      return randomWords(words, rng);
+      return {
+        wordGenerator: randomWords(words, rng),
+        fallbackUsed,
+        candidateCount,
+      };
     }
-    return pseudoWords;
+    return {
+      wordGenerator: pseudoWords,
+      fallbackUsed: false,
+    };
   }
 }

@@ -1,6 +1,7 @@
 import { describe, it, test } from "node:test";
 import { Layout, loadKeyboard } from "@keybr/keyboard";
 import { FakePhoneticModel } from "@keybr/phonetic-model";
+import { type RNGStream } from "@keybr/rand";
 import { makeKeyStatsMap } from "@keybr/result";
 import { Settings } from "@keybr/settings";
 import { deepEqual, equal } from "rich-assert";
@@ -150,75 +151,65 @@ describe("generate text from a broken phonetic model", () => {
   const settings = new Settings();
   const keyboard = loadKeyboard(Layout.EN_US);
 
-  it("should generate from empty words", () => {
+  it("should return unavailable for empty words", () => {
     const model = new FakePhoneticModel([""]);
     const lesson = new GuidedLesson(settings, keyboard, model, []);
     const lessonKeys = lesson.update(makeKeyStatsMap(lesson.letters, []));
 
-    equal(
-      lesson.generate(lessonKeys, model.rng),
-      "? ? ? ? ? ? ? ? ? ? " +
-        "? ? ? ? ? ? ? ? ? ? " +
-        "? ? ? ? ? ? ? ? ? ? " +
-        "? ? ? ? ? ? ? ? ? ? " +
-        "? ? ? ? ? ? ? ? ? ? " +
-        "? ? ? ? ? ? ? ? ? ? " +
-        "? ? ? ? ? ? ? ? ? ? " +
-        "? ? ? ? ? ? ? ? ? ? " +
-        "? ? ? ? ? ? ? ? ? ? " +
-        "? ? ? ? ? ? ? ? ? ?",
-    );
+    deepEqual(lesson.generate(lessonKeys, model.rng), {
+      kind: "unavailable",
+      origin: "guided",
+      fallbackUsed: true,
+      reason: "no-valid-candidates",
+      action: "settings",
+      candidateCount: 0,
+    });
   });
 
-  it("should generate from repeating words", () => {
+  it("should return unavailable for invalid short words", () => {
     const model = new FakePhoneticModel(["x"]);
     const lesson = new GuidedLesson(settings, keyboard, model, []);
     const lessonKeys = lesson.update(makeKeyStatsMap(lesson.letters, []));
 
-    equal(
-      lesson.generate(lessonKeys, model.rng),
-      "x x x x x x x x x x " +
-        "x x x x x x x x x x " +
-        "x x x x x x x x x x " +
-        "x x x x x x x x x x " +
-        "x x x x x x x x x x " +
-        "x x x x x x x x x x " +
-        "x x x x x x x x x x " +
-        "x x x x x x x x x x " +
-        "x x x x x x x x x x " +
-        "x x x x x x x x x x",
-    );
+    deepEqual(lesson.generate(lessonKeys, model.rng), {
+      kind: "unavailable",
+      origin: "guided",
+      fallbackUsed: true,
+      reason: "no-valid-candidates",
+      action: "settings",
+      candidateCount: 0,
+    });
   });
 });
 
 test("generate text with pseudo words", () => {
   const settings = new Settings().set(lessonProps.guided.naturalWords, false);
   const keyboard = loadKeyboard(Layout.EN_US);
-  const model = new FakePhoneticModel(["uno", "due", "tre"]);
+  const model = new FakePhoneticModel(["abc", "bca", "cab"]);
   const lesson = new GuidedLesson(settings, keyboard, model, []);
   const lessonKeys = lesson.update(makeKeyStatsMap(lesson.letters, []));
 
   equal(
     lesson.generate(lessonKeys, model.rng),
-    "uno due tre " +
-      "uno due tre " +
-      "uno due tre " +
-      "uno due tre " +
-      "uno due tre " +
-      "uno due tre " +
-      "uno due tre " +
-      "uno due tre " +
-      "uno due tre " +
-      "uno due tre " +
-      "uno due tre " +
-      "uno",
+    "abc bca cab " +
+      "abc bca cab " +
+      "abc bca cab " +
+      "abc bca cab " +
+      "abc bca cab " +
+      "abc bca cab " +
+      "abc bca cab " +
+      "abc bca cab " +
+      "abc bca cab " +
+      "abc bca cab " +
+      "abc bca cab " +
+      "abc",
   );
 });
 
 test("generate text with natural words", () => {
   const settings = new Settings().set(lessonProps.guided.naturalWords, true);
   const keyboard = loadKeyboard(Layout.EN_US);
-  const model = new FakePhoneticModel(["uno", "due", "tre"]);
+  const model = new FakePhoneticModel(["abc", "bca", "cab"]);
   const lesson = new GuidedLesson(settings, keyboard, model, [
     "abcaa",
     "abcab",
@@ -243,6 +234,84 @@ test("generate text with natural words", () => {
     "abcaf abcbe abcaa abcaf abcbe abcaa abcaf abcbe abcaa abcaf abcbe abcaa " +
       "abcaf abcbe abcaa abcaf abcbe abcaa abcaf abcbe",
   );
+});
+
+test("personal Guided reaches the natural-word tail beyond the standard cap", () => {
+  const settings = new Settings();
+  const keyboard = loadKeyboard(Layout.EN_US);
+  const model = new FakePhoneticModel([""]);
+  const wordList = [...Array.from({ length: 1000 }, () => "abc"), "acb"];
+  const standard = new GuidedLesson(settings, keyboard, model, wordList, {
+    source: "ru-standard",
+    limit: 1000,
+    naturalWordLimit: 1000,
+  });
+  const personal = new GuidedLesson(settings, keyboard, model, wordList, {
+    source: "ru-personal",
+    limit: "all",
+    naturalWordLimit: null,
+  });
+  const standardKeys = standard.update(makeKeyStatsMap(standard.letters, []));
+  const personalKeys = personal.update(makeKeyStatsMap(personal.letters, []));
+  const lastWord: RNGStream = Object.assign(() => 0.999999, {
+    mark: () => 0,
+    reset: (_mark: number) => {},
+  });
+
+  equal(
+    String(standard.generate(standardKeys, lastWord)).includes("acb"),
+    false,
+  );
+  equal(
+    String(personal.generate(personalKeys, lastWord)).includes("acb"),
+    true,
+  );
+});
+
+test("natural fallback adds only the missing candidates", () => {
+  const settings = new Settings();
+  const keyboard = loadKeyboard(Layout.EN_US);
+
+  for (const naturalCount of [0, 1, 14, 15]) {
+    class CountingModel extends FakePhoneticModel {
+      calls = 0;
+
+      override nextWord(): string {
+        this.calls++;
+        return "abc";
+      }
+    }
+
+    const model = new CountingModel();
+    const lesson = new GuidedLesson(
+      settings,
+      keyboard,
+      model,
+      Array.from({ length: naturalCount }, () => "abc"),
+    );
+    const lessonKeys = lesson.update(makeKeyStatsMap(lesson.letters, []));
+
+    lesson.generate(lessonKeys, model.rng);
+    equal(model.calls, Math.max(0, 15 - naturalCount));
+  }
+});
+
+test("natural fallback continues after an invalid candidate", () => {
+  class SequenceModel extends FakePhoneticModel {
+    index = 0;
+
+    override nextWord(): string {
+      return ["x", "abc"][this.index++ % 2];
+    }
+  }
+
+  const settings = new Settings();
+  const keyboard = loadKeyboard(Layout.EN_US);
+  const model = new SequenceModel();
+  const lesson = new GuidedLesson(settings, keyboard, model, []);
+  const lessonKeys = lesson.update(makeKeyStatsMap(lesson.letters, []));
+
+  equal(typeof lesson.generate(lessonKeys, model.rng), "string");
 });
 
 describe("unlock keys", () => {

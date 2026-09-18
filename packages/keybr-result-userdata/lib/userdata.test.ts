@@ -20,9 +20,10 @@ import {
 } from "rich-assert";
 import { type UserData, UserDataFactory } from "./index.ts";
 
-const tmp =
-  process.env.DATA_DIR ??
-  resolve(tmpdir(), `keybr-result-userdata-${randomBytes(6).toString("hex")}`);
+const tmp = resolve(
+  tmpdir(),
+  `keybr-result-userdata-${randomBytes(6).toString("hex")}`,
+);
 
 test.beforeEach(async () => {
   await removeDir(tmp);

@@ -31,10 +31,12 @@ export class Settings {
   }
 
   get<T>(prop: AnyProp<T>, defaultValue?: T): T {
-    return prop.fromJson(
-      this.#json[prop.key] ?? defaultJson[prop.key],
-      defaultValue,
-    );
+    const value = prop.preserveNull
+      ? Object.prototype.hasOwnProperty.call(this.#json, prop.key)
+        ? this.#json[prop.key]
+        : defaultJson[prop.key]
+      : (this.#json[prop.key] ?? defaultJson[prop.key]);
+    return prop.fromJson(value, defaultValue);
   }
 
   set<T>(prop: AnyProp<T>, value: T): Settings {

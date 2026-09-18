@@ -42,7 +42,7 @@ function ProgressUpdater({ lesson }: { readonly lesson: Lesson }) {
 
 function useProgress(lesson: Lesson, results: readonly Result[]) {
   const { settings } = useSettings();
-  const [done, setDone] = useState(false);
+  const [seededProgress, setSeededProgress] = useState<Progress | null>(null);
   const [loading, setLoading] = useState({ total: 0, current: 0 });
   const progress = useMemo(
     () => new Progress(settings, lesson),
@@ -54,12 +54,25 @@ function useProgress(lesson: Lesson, results: readonly Result[]) {
     // freezing of the UI.
     const controller = new AbortController();
     const { signal } = controller;
-    schedule(progress.seedAsync(lesson.filter(results), setLoading), { signal })
-      .then(() => setDone(true))
+    setSeededProgress(null);
+    setLoading({ total: 0, current: 0 });
+    const updateLoading = (value: { total: number; current: number }) => {
+      if (!signal.aborted) {
+        setLoading(value);
+      }
+    };
+    schedule(progress.seedAsync(lesson.filter(results), updateLoading), {
+      signal,
+    })
+      .then(() => {
+        if (!signal.aborted) {
+          setSeededProgress(progress);
+        }
+      })
       .catch(catchError);
     return () => {
       controller.abort();
     };
   }, [progress, lesson, results]);
-  return [done ? progress : null, loading] as const;
+  return [seededProgress === progress ? progress : null, loading] as const;
 }

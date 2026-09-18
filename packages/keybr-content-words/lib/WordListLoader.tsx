@@ -1,20 +1,35 @@
-import { type WordList } from "@keybr/content";
-import { catchError } from "@keybr/debug";
+import { type WordList, type WordListSource } from "@keybr/content";
+import { ErrorAlert } from "@keybr/debug";
 import { type Language } from "@keybr/keyboard";
+import { Button } from "@keybr/widget";
 import { type ReactNode, useEffect, useState } from "react";
-import { loadWordList } from "./load.ts";
+import {
+  loadWordList,
+  resolveWordListDescriptor,
+  wordListDescriptorIdentity,
+} from "./load.ts";
 
 export function WordListLoader({
   language,
+  source = "ru-standard",
   children,
   fallback,
 }: {
   readonly language: Language;
+  readonly source?: WordListSource;
   readonly children: (result: WordList) => ReactNode;
   readonly fallback?: ReactNode;
 }): ReactNode {
+  const identity = wordListDescriptorIdentity(
+    resolveWordListDescriptor(language, source),
+  );
   return (
-    <Loader key={language.id} language={language} fallback={fallback}>
+    <Loader
+      key={`${language.id}:${source}:${identity}`}
+      language={language}
+      source={source}
+      fallback={fallback}
+    >
       {children}
     </Loader>
   );
@@ -22,39 +37,58 @@ export function WordListLoader({
 
 function Loader({
   language,
+  source,
   children,
   fallback,
 }: {
   readonly language: Language;
+  readonly source: WordListSource;
   readonly children: (result: WordList) => ReactNode;
   readonly fallback?: ReactNode;
 }): ReactNode {
-  const result = useLoader(language);
-  if (result == null) {
+  const [{ error, wordList }, retry] = useLoader(language, source);
+  if (error != null) {
+    return (
+      <>
+        <ErrorAlert title="Could not load the word list." error={error} />
+        <Button size={16} label="Retry" onClick={retry} />
+      </>
+    );
+  }
+  if (wordList == null) {
     return fallback;
   } else {
-    return children(result);
+    return children(wordList);
   }
 }
 
-function useLoader(language: Language): WordList | null {
-  const [wordList, setWordList] = useState<WordList | null>(null);
+function useLoader(language: Language, source: WordListSource) {
+  const [state, setState] = useState<{
+    readonly wordList: WordList | null;
+    readonly error: unknown;
+  }>({ wordList: null, error: null });
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     let didCancel = false;
 
-    loadWordList(language)
+    setState({ error: null, wordList: null });
+    loadWordList(language, source)
       .then((wordList) => {
         if (!didCancel) {
-          setWordList(wordList);
+          setState({ error: null, wordList });
         }
       })
-      .catch(catchError);
+      .catch((error) => {
+        if (!didCancel) {
+          setState({ error, wordList: null });
+        }
+      });
 
     return () => {
       didCancel = true;
     };
-  }, [language]);
+  }, [language, retry, source]);
 
-  return wordList;
+  return [state, () => setRetry((value) => value + 1)] as const;
 }

@@ -1,5 +1,6 @@
 import { wordListStats } from "@keybr/content";
 import { useIntlNumbers } from "@keybr/intl";
+import { KeyboardOptions, Language } from "@keybr/keyboard";
 import { lessonProps, type WordListLesson } from "@keybr/lesson";
 import { useSettings } from "@keybr/settings";
 import {
@@ -33,7 +34,7 @@ export function WordListLessonSettings({
         <Description>
           <FormattedMessage
             id="lessonType.wordList.description"
-            defaultMessage="Generate typing lessons from the list of the most common words of your language. All keys are included by default. This mode is for the pros."
+            defaultMessage="Generate typing lessons only from the selected word list. All keys are included by default; unlike Guided, this strict mode never adds pseudo-words."
           />
         </Description>
       </Explainer>
@@ -61,29 +62,55 @@ function WordListPreview({
 }): ReactNode {
   const { formatMessage } = useIntl();
   const { settings, updateSettings } = useSettings();
+  const language = KeyboardOptions.from(settings).language;
+  const source =
+    language === Language.RU
+      ? settings.get(lessonProps.wordList.source)
+      : "ru-standard";
+  const limit =
+    language === Language.RU
+      ? settings.get(lessonProps.wordList.limit)
+      : "inherit";
+  const showLegacySize = source === "ru-standard" || language !== Language.RU;
+  const useExplicitLimit =
+    language === Language.RU &&
+    source === "ru-standard" &&
+    typeof limit === "number";
   return (
     <>
       <FieldList>
-        <Field>
-          <FormattedMessage
-            id="t_Word_list_size:"
-            defaultMessage="Word list size:"
-          />
-        </Field>
-        <Field>
-          <Range
-            size={16}
-            min={lessonProps.wordList.wordListSize.min}
-            max={lessonProps.wordList.wordListSize.max}
-            step={1}
-            value={settings.get(lessonProps.wordList.wordListSize)}
-            onChange={(value) => {
-              updateSettings(
-                settings.set(lessonProps.wordList.wordListSize, value),
-              );
-            }}
-          />
-        </Field>
+        {showLegacySize && (
+          <>
+            <Field>
+              <FormattedMessage
+                id="t_Word_list_size:"
+                defaultMessage="Word list size:"
+              />
+            </Field>
+            <Field>
+              <Range
+                size={16}
+                min={
+                  useExplicitLimit ? 1 : lessonProps.wordList.wordListSize.min
+                }
+                max={lessonProps.wordList.wordListSize.max}
+                step={1}
+                value={
+                  useExplicitLimit
+                    ? (limit as number)
+                    : settings.get(lessonProps.wordList.wordListSize)
+                }
+                onChange={(value) => {
+                  updateSettings(
+                    useExplicitLimit
+                      ? settings.set(lessonProps.wordList.limit, value)
+                      : settings.set(lessonProps.wordList.wordListSize, value),
+                  );
+                }}
+              />
+            </Field>
+          </>
+        )}
         <Field>
           <CheckBox
             label={formatMessage({
@@ -120,6 +147,26 @@ function WordListStats({
   const { wordCount, avgWordLength } = wordListStats(lesson.wordList);
   return (
     <FieldList>
+      {lesson.policy.sourceTotal != null && (
+        <Field>
+          <NameValue
+            name={formatMessage({
+              id: "t_Source_words",
+              defaultMessage: "Source words",
+            })}
+            value={formatNumber(lesson.policy.sourceTotal)}
+          />
+        </Field>
+      )}
+      <Field>
+        <NameValue
+          name={formatMessage({
+            id: "t_Filtered_words",
+            defaultMessage: "Filtered words",
+          })}
+          value={formatNumber(lesson.filteredWordCount)}
+        />
+      </Field>
       <Field>
         <NameValue
           name={formatMessage({
@@ -129,6 +176,17 @@ function WordListStats({
           value={formatNumber(wordCount)}
         />
       </Field>
+      {lesson.policy.sourceVersion != null && (
+        <Field>
+          <NameValue
+            name={formatMessage({
+              id: "t_Source_version",
+              defaultMessage: "Source version",
+            })}
+            value={formatNumber(lesson.policy.sourceVersion)}
+          />
+        </Field>
+      )}
       <Field>
         <NameValue
           name={formatMessage({

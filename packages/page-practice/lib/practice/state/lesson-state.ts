@@ -1,7 +1,9 @@
 import { keyboardProps, type KeyId } from "@keybr/keyboard";
 import {
   type DailyGoal,
+  isLessonUnavailable,
   Lesson,
+  type LessonGenerationResult,
   type LessonKeys,
   lessonProps,
 } from "@keybr/lesson";
@@ -13,10 +15,9 @@ import {
 } from "@keybr/result";
 import { type Settings } from "@keybr/settings";
 import {
-  type Feedback,
+  Feedback,
   type LineList,
   makeStats,
-  type StyledText,
   type TextDisplaySettings,
   TextInput,
   type TextInputSettings,
@@ -42,9 +43,10 @@ export class LessonState {
 
   lastLesson: LastLesson | null = null;
 
-  textInput!: TextInput; // Mutable.
-  lines!: LineList; // Mutable.
-  suffix!: readonly CodePoint[]; // Mutable.
+  generation!: LessonGenerationResult; // Mutable.
+  textInput: TextInput | null = null; // Mutable.
+  lines: LineList = { text: "", lines: [] }; // Mutable.
+  suffix: readonly CodePoint[] = []; // Mutable.
   depressedKeys: readonly KeyId[] = []; // Mutable.
 
   constructor(
@@ -65,7 +67,9 @@ export class LessonState {
   }
 
   resetLesson() {
-    this.#reset(this.textInput.text);
+    if (this.textInput != null) {
+      this.#reset(this.textInput.text);
+    }
   }
 
   skipLesson() {
@@ -73,27 +77,39 @@ export class LessonState {
   }
 
   onInput(event: IInputEvent): Feedback {
-    const feedback = this.textInput.onInput(event);
-    this.lines = this.textInput.lines;
-    this.suffix = this.textInput.remaining.map(({ codePoint }) => codePoint);
-    if (this.textInput.completed) {
-      this.#onResult(this.#makeResult(), this.textInput);
+    const textInput = this.textInput;
+    if (textInput == null) {
+      return Feedback.Failed;
+    }
+    const feedback = textInput.onInput(event);
+    this.lines = textInput.lines;
+    this.suffix = textInput.remaining.map(({ codePoint }) => codePoint);
+    if (textInput.completed) {
+      this.#onResult(this.#makeResult(textInput), textInput);
     }
     return feedback;
   }
 
-  #reset(fragment: StyledText) {
-    this.textInput = new TextInput(fragment, this.textInputSettings);
-    this.lines = this.textInput.lines;
-    this.suffix = this.textInput.remaining.map(({ codePoint }) => codePoint);
+  #reset(generation: LessonGenerationResult) {
+    this.generation = generation;
+    if (isLessonUnavailable(generation)) {
+      this.textInput = null;
+      this.lines = { text: "", lines: [] };
+      this.suffix = [];
+      return;
+    }
+    const textInput = new TextInput(generation, this.textInputSettings);
+    this.textInput = textInput;
+    this.lines = textInput.lines;
+    this.suffix = textInput.remaining.map(({ codePoint }) => codePoint);
   }
 
-  #makeResult(timeStamp = Date.now()) {
+  #makeResult(textInput: TextInput, timeStamp = Date.now()) {
     return Result.fromStats(
       this.settings.get(keyboardProps.layout),
       this.settings.get(lessonProps.type).textType,
       timeStamp,
-      makeStats(this.textInput.steps),
+      makeStats(textInput.steps),
     );
   }
 }

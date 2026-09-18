@@ -10,6 +10,7 @@ export type EnumLike = { readonly [key: string]: number | string };
 export type AnyProp<T> = {
   readonly key: string;
   readonly defaultValue: T;
+  readonly preserveNull?: boolean;
   toJson(value: T): unknown;
   fromJson(value: unknown, defaultValue?: T): T;
 };

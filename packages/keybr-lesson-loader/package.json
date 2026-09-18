@@ -6,6 +6,7 @@
   "main": "lib/index.ts",
   "types": ".types/index.d.ts",
   "dependencies": {
+    "@keybr/content": "*",
     "@keybr/content-books": "*",
     "@keybr/content-words": "*",
     "@keybr/debug": "*",
@@ -14,7 +15,8 @@
     "@keybr/pages-shared": "*",
     "@keybr/phonetic-model": "*",
     "@keybr/phonetic-model-loader": "*",
-    "@keybr/settings": "*"
+    "@keybr/settings": "*",
+    "@keybr/widget": "*"
   },
   "devDependencies": {},
   "scripts": {

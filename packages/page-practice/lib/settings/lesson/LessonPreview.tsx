@@ -1,4 +1,4 @@
-import { type Lesson } from "@keybr/lesson";
+import { isLessonUnavailable, type Lesson } from "@keybr/lesson";
 import { CurrentKeyRow, KeySetRow } from "@keybr/lesson-ui";
 import { LCG } from "@keybr/rand";
 import { makeKeyStatsMap, useResults } from "@keybr/result";
@@ -12,6 +12,7 @@ import { StaticText } from "@keybr/textinput-ui";
 import { FieldSet } from "@keybr/widget";
 import { type ReactNode, useMemo } from "react";
 import { useIntl } from "react-intl";
+import { LessonUnavailableMessage } from "../../LessonUnavailableMessage.tsx";
 import * as styles from "./LessonPreview.module.less";
 
 export function LessonPreview({
@@ -22,16 +23,13 @@ export function LessonPreview({
   const { formatMessage } = useIntl();
   const { settings } = useSettings();
   const { results } = useResults();
-  const { lessonKeys, textInput } = useMemo(() => {
+  const { lessonKeys, generation } = useMemo(() => {
     const lessonKeys = lesson.update(
       makeKeyStatsMap(lesson.letters, lesson.filter(results)),
     );
-    const textInput = new TextInput(
-      lesson.generate(lessonKeys, LCG(123)),
-      toTextInputSettings(settings),
-    );
-    return { lessonKeys, textInput };
-  }, [settings, lesson, results]);
+    const generation = lesson.generate(lessonKeys, LCG(123));
+    return { lessonKeys, generation };
+  }, [lesson, results]);
   return (
     <FieldSet
       legend={formatMessage({
@@ -43,10 +41,16 @@ export function LessonPreview({
         <KeySetRow lessonKeys={lessonKeys} />
         <CurrentKeyRow lessonKeys={lessonKeys} />
         <div className={styles.text}>
-          <StaticText
-            settings={toTextDisplaySettings(settings)}
-            lines={textInput.lines}
-          />
+          {isLessonUnavailable(generation) ? (
+            <LessonUnavailableMessage unavailable={generation} />
+          ) : (
+            <StaticText
+              settings={toTextDisplaySettings(settings)}
+              lines={
+                new TextInput(generation, toTextInputSettings(settings)).lines
+              }
+            />
+          )}
         </div>
       </div>
     </FieldSet>

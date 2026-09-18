@@ -46,7 +46,7 @@ export abstract class PhoneticModel {
 
 export namespace PhoneticModel {
   export type Loader = {
-    (language: Language): Promise<PhoneticModel>;
+    (language: Language, source?: string): Promise<PhoneticModel>;
   };
 }
 

@@ -1,7 +1,16 @@
 import { test } from "node:test";
+import { Language } from "@keybr/keyboard";
+import { FakePhoneticModel, Filter, Letter } from "@keybr/phonetic-model";
 import { FakeRNGStream } from "@keybr/rand";
-import { equal, isNull } from "rich-assert";
-import { randomWords, uniqueWords, wordSequence } from "./words.ts";
+import { equal, isFalse, isNull, isTrue } from "rich-assert";
+import {
+  isValidCandidate,
+  mangledWords,
+  phoneticWords,
+  randomWords,
+  uniqueWords,
+  wordSequence,
+} from "./words.ts";
 
 test("random words", () => {
   const rng = FakeRNGStream(3);
@@ -44,4 +53,48 @@ test("unique words", () => {
   equal(words(), "c");
   equal(words(), "a");
   equal(words(), "b");
+});
+
+test("validate phonetic candidates against length and focus", () => {
+  const a = new Letter(0x61, 1);
+  const filter = new Filter([a, new Letter(0x62, 1)], a);
+
+  isTrue(isValidCandidate("aba", filter));
+  isFalse(isValidCandidate("ab", filter));
+  isFalse(isValidCandidate("bbb", filter));
+  isFalse(isValidCandidate("a-", filter));
+});
+
+test("does not add a retry layer over the model budget", () => {
+  class RejectingModel extends FakePhoneticModel {
+    calls = 0;
+
+    override nextWord(): string {
+      this.calls++;
+      return "";
+    }
+  }
+
+  const model = new RejectingModel();
+  const letter = FakePhoneticModel.letter1;
+  const filter = new Filter([letter], letter);
+
+  isNull(phoneticWords(model, filter, () => 0)());
+  equal(model.calls, 1);
+});
+
+test("propagate an unavailable hyphen suffix", () => {
+  const punctuators = Letter.punctuators.filter(({ codePoint }) => {
+    return codePoint === 0x2d;
+  });
+  let calls = 0;
+  const word = mangledWords(
+    () => (calls++ === 0 ? "abc" : null),
+    Language.EN,
+    punctuators,
+    { withPunctuators: 1 },
+    () => 0,
+  );
+
+  isNull(word());
 });

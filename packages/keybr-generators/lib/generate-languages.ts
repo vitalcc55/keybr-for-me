@@ -8,6 +8,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { Language } from "@keybr/keyboard";
 import { TransitionTableBuilder } from "@keybr/phonetic-model";
+import { toCodePoints } from "@keybr/unicode";
 import chalk from "chalk";
 import {
   fromCsv,
@@ -22,7 +23,14 @@ for (const language of Language.ALL) {
 }
 
 function generate(language: Language): void {
-  const { id, alphabet } = language;
+  const { id } = language;
+  // The checked-in standard RU model predates the personal ё model and must
+  // remain byte-compatible when this broad generator is run again.
+  const alphabet =
+    language === Language.RU
+      ? language.alphabet.filter((codePoint) => codePoint !== 0x0451)
+      : language.alphabet;
+  const modelAlphabet = new Set(alphabet);
 
   const dictPath = pathTo(`dictionaries/dictionary-${id}.csv`);
   const modelPath = pathTo(`../keybr-phonetic-model/assets/model-${id}.data`);
@@ -93,7 +101,13 @@ function generate(language: Language): void {
       const unique = new Set();
       const dict = fromCsv(data)
         .filter(([word]) => {
-          if (language.test(word)) {
+          const normalized = language.lowerCase(word);
+          if (
+            language.test(word) &&
+            [...toCodePoints(normalized)].every((codePoint) =>
+              modelAlphabet.has(codePoint),
+            )
+          ) {
             return true;
           } else {
             console.warn(`[${id}] ${chalk.red(`Extraneous word [${word}]`)}`);

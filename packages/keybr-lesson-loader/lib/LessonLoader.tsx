@@ -1,7 +1,12 @@
+import { type WordListPolicy } from "@keybr/content";
 import { loadContent } from "@keybr/content-books";
-import { loadWordList } from "@keybr/content-words";
-import { catchError } from "@keybr/debug";
-import { KeyboardOptions, useKeyboard } from "@keybr/keyboard";
+import {
+  loadWordList,
+  resolveWordListDescriptor,
+  resolveWordListPolicy,
+} from "@keybr/content-words";
+import { ErrorAlert } from "@keybr/debug";
+import { KeyboardOptions, Language, useKeyboard } from "@keybr/keyboard";
 import {
   BooksLesson,
   CodeLesson,
@@ -16,8 +21,9 @@ import {
 import { LoadingProgress } from "@keybr/pages-shared";
 import { type PhoneticModel } from "@keybr/phonetic-model";
 import { PhoneticModelLoader } from "@keybr/phonetic-model-loader";
-import { useSettings } from "@keybr/settings";
-import { type ReactNode, useEffect, useState } from "react";
+import { type Settings, useSettings } from "@keybr/settings";
+import { Button } from "@keybr/widget";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 export function LessonLoader({
   children,
@@ -26,13 +32,52 @@ export function LessonLoader({
   readonly children: (result: Lesson) => ReactNode;
   readonly fallback?: ReactNode;
 }): ReactNode {
-  const { settings } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const lessonType = settings.get(lessonProps.type);
-  const { language } = KeyboardOptions.from(settings);
+  const options = KeyboardOptions.from(settings);
+  const { language } = options;
+  const sourceResolution = useMemo(() => {
+    try {
+      return {
+        error: null,
+        policy: resolveSourcePolicy(settings, language, lessonType),
+      };
+    } catch (error) {
+      return { error, policy: null };
+    }
+  }, [language, lessonType, settings]);
+  if (sourceResolution.error != null || sourceResolution.policy == null) {
+    return (
+      <>
+        <ErrorAlert
+          title="Invalid lesson settings."
+          error={sourceResolution.error}
+        />
+        <Button
+          size={16}
+          label="Reset lesson settings"
+          onClick={() => updateSettings(settings.reset())}
+        />
+      </>
+    );
+  }
+  const sourcePolicy = sourceResolution.policy;
+  const modelSource =
+    sourcePolicy.source === "ru-personal" ? "ru-personal" : "standard";
   return (
-    <PhoneticModelLoader language={language}>
+    <PhoneticModelLoader
+      language={language}
+      source={modelSource}
+      sourceKey={sourcePolicy.identity}
+    >
       {(model) => (
-        <Loader key={lessonType.id} model={model} fallback={fallback}>
+        <Loader
+          key={`${lessonType.id}:${language.id}:${options.layout.id}:${sourcePolicy.source}:${sourcePolicy.limit}:${sourcePolicy.identity ?? "legacy"}:${JSON.stringify(settings.toJSON())}`}
+          language={language}
+          model={model}
+          policy={sourcePolicy}
+          fallback={fallback}
+        >
           {children}
         </Loader>
       )}
@@ -41,15 +86,27 @@ export function LessonLoader({
 }
 
 function Loader({
+  language,
   model,
+  policy,
   children,
   fallback,
 }: {
+  readonly language: Language;
   readonly model: PhoneticModel;
+  readonly policy: WordListPolicy;
   readonly children: (result: Lesson) => ReactNode;
   readonly fallback?: ReactNode;
 }): ReactNode {
-  const result = useLoader(model);
+  const [{ error, result }, retry] = useLoader(language, model, policy);
+  if (error != null) {
+    return (
+      <>
+        <ErrorAlert title="Could not load the lesson." error={error} />
+        <Button size={16} label="Retry" onClick={retry} />
+      </>
+    );
+  }
   if (result == null) {
     return fallback;
   } else {
@@ -57,29 +114,54 @@ function Loader({
   }
 }
 
-function useLoader(model: PhoneticModel): Lesson | null {
+function useLoader(
+  language: Language,
+  model: PhoneticModel,
+  policy: WordListPolicy,
+) {
   const { settings } = useSettings();
   const keyboard = useKeyboard();
-  const [result, setResult] = useState<Lesson | null>(null);
+  const [state, setState] = useState<{
+    readonly result: Lesson | null;
+    readonly error: unknown;
+  }>({ result: null, error: null });
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     let didCancel = false;
+    setState({ result: null, error: null });
 
     const load = async (): Promise<void> => {
       switch (settings.get(lessonProps.type)) {
         case LessonType.GUIDED: {
-          const { language } = KeyboardOptions.from(settings);
-          const wordList = await loadWordList(language);
+          const wordList = await loadWordList(language, policy.source);
           if (!didCancel) {
-            setResult(new GuidedLesson(settings, keyboard, model, wordList));
+            setState({
+              error: null,
+              result: new GuidedLesson(
+                settings,
+                keyboard,
+                model,
+                wordList,
+                policy,
+              ),
+            });
           }
           break;
         }
         case LessonType.WORDLIST: {
-          const { language } = KeyboardOptions.from(settings);
-          const wordList = await loadWordList(language);
+          const wordList = await loadWordList(language, policy.source);
           if (!didCancel) {
-            setResult(new WordListLesson(settings, keyboard, model, wordList));
+            setState({
+              error: null,
+              result: new WordListLesson(
+                settings,
+                keyboard,
+                model,
+                wordList,
+                policy,
+              ),
+            });
           }
           break;
         }
@@ -87,27 +169,40 @@ function useLoader(model: PhoneticModel): Lesson | null {
           const book = settings.get(lessonProps.books.book);
           const content = await loadContent(book);
           if (!didCancel) {
-            setResult(
-              new BooksLesson(settings, keyboard, model, { book, content }),
-            );
+            setState({
+              error: null,
+              result: new BooksLesson(settings, keyboard, model, {
+                book,
+                content,
+              }),
+            });
           }
           break;
         }
         case LessonType.CUSTOM: {
           if (!didCancel) {
-            setResult(new CustomTextLesson(settings, keyboard, model));
+            setState({
+              error: null,
+              result: new CustomTextLesson(settings, keyboard, model),
+            });
           }
           break;
         }
         case LessonType.CODE: {
           if (!didCancel) {
-            setResult(new CodeLesson(settings, keyboard, model));
+            setState({
+              error: null,
+              result: new CodeLesson(settings, keyboard, model),
+            });
           }
           break;
         }
         case LessonType.NUMBERS: {
           if (!didCancel) {
-            setResult(new NumbersLesson(settings, keyboard, model));
+            setState({
+              error: null,
+              result: new NumbersLesson(settings, keyboard, model),
+            });
           }
           break;
         }
@@ -116,12 +211,39 @@ function useLoader(model: PhoneticModel): Lesson | null {
       }
     };
 
-    load().catch(catchError);
+    load().catch((error) => {
+      if (!didCancel) {
+        setState({ error, result: null });
+      }
+    });
 
     return () => {
       didCancel = true;
     };
-  }, [settings, keyboard, model]);
+  }, [language, model, policy, retry, settings, keyboard]);
 
-  return result;
+  return [state, () => setRetry((value) => value + 1)] as const;
+}
+
+function resolveSourcePolicy(
+  settings: Settings,
+  language: Language,
+  lessonType: LessonType,
+): WordListPolicy {
+  const usesWordList =
+    lessonType === LessonType.GUIDED || lessonType === LessonType.WORDLIST;
+  if (!usesWordList || language !== Language.RU) {
+    return resolveWordListPolicy(
+      resolveWordListDescriptor(language, "ru-standard"),
+      "inherit",
+      settings.get(lessonProps.wordList.wordListSize),
+    );
+  }
+  const source = settings.get(lessonProps.wordList.source);
+  const descriptor = resolveWordListDescriptor(language, source);
+  return resolveWordListPolicy(
+    descriptor,
+    settings.get(lessonProps.wordList.limit),
+    settings.get(lessonProps.wordList.wordListSize),
+  );
 }

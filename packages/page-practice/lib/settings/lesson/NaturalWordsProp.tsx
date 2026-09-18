@@ -35,7 +35,7 @@ export function NaturalWordsProp(): ReactNode {
         <Description>
           <FormattedMessage
             id="settings.naturalWords.description"
-            defaultMessage="Use the dictionary words as much as possible, and if not many such words are available, then use computer-generated pseudo-words. Natural words might be easier to type. Pseudo-words offer a much greater variety of letter combinations. If this option is enabled, you will see more pseudo-words in the beginning, when the letter list is short. However, as you unlock few more letters, there is a good chance that only the dictionary words will be used."
+            defaultMessage="Guided keeps its adaptive focus on weak keys. It uses dictionary words longer than two characters when possible, and supplements them with pseudo-words when the focused key has too few matches. Unlike Guided, Word List remains strict and never adds pseudo-words."
           />
         </Description>
       </Explainer>

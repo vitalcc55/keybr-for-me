@@ -154,6 +154,8 @@ export class GuidedLesson extends Lesson {
       return Letter.weightedFrequencyOrder(letters, ({ codePoint }) =>
         codePoints.weight(codePoint),
       );
+    } else if (this.policy.source === "ru-personal") {
+      return letters;
     } else {
       return Letter.frequencyOrder(letters);
     }

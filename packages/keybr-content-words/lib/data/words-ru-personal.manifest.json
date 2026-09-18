@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sourceId": "ru-personal",
+  "wordListId": "words-ru-personal",
+  "languageId": "ru",
+  "corpusVersion": 1,
+  "wordCount": 1232,
+  "corpusSha256": "ab09647a03f1c3439e143ff20372c4d864d792ed42a1f59a5db1920bef35e563",
+  "provenance": {
+    "repository": "vitalcc55/keybr-for-me",
+    "issue": 3,
+    "url": "https://github.com/vitalcc55/keybr-for-me/issues/3"
+  }
+}

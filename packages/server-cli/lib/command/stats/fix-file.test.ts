@@ -8,9 +8,10 @@ import { File } from "@sosimple/fsx-file";
 import { isFalse, isTrue } from "rich-assert";
 import { fixFile } from "./fix-file.ts";
 
-const tmp =
-  process.env.DATA_DIR ??
-  resolve(tmpdir(), `keybr-server-cli-${randomBytes(6).toString("hex")}`);
+const tmp = resolve(
+  tmpdir(),
+  `keybr-server-cli-${randomBytes(6).toString("hex")}`,
+);
 
 test.beforeEach(async () => {
   await removeDir(tmp);

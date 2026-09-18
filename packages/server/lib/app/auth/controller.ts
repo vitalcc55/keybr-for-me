@@ -112,7 +112,11 @@ export class Controller {
     if (user != null) {
       ctx.state.session.start();
       ctx.state.session.set("userId", user.id!);
-      ctx.response.redirect("/account");
+      const redirect = new URL(
+        ctx.request.req.url ?? "/",
+        this.canonicalUrl,
+      ).searchParams.get("redirect");
+      ctx.response.redirect(redirect === "/ru" ? "/ru" : "/account");
     } else {
       throw new ForbiddenError("Invalid login link", {
         description:

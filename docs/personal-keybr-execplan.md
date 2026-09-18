@@ -131,3 +131,7 @@
 ## Definition of done
 
 Рабочая ветка содержит плановый и итоговый commits, единый personal source/model contract, проверенные локальные запуск и сохранность, полный Word List, адаптивный Guided с `ё`, сохранённые штатные режимы, focused/review/full verification evidence и точный Windows-runbook. Никакой новый контур не добавлен без доказанного acceptance-блокера.
+
+## Progress log
+
+- 2026-09-18 — этапы #2 и #3 реализованы в этой ветке и прошли последний read-only review без новых actionable findings после исправлений. Подтверждены loopback/ownership/data-safety focused checks, isolated test profiles, exact personal corpus, checksum, manifest и byte-level export. Следующий этап — #4: добавить `ё` в персональную фонетическую модель, не изменяя штатные assets.

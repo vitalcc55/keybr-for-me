@@ -12,8 +12,17 @@ import { Service } from "./server/service.ts";
 // Allow Node to bind to port 80 and 443 without sudo:
 // sudo setcap cap_net_bind_service=+ep $(which node)
 
+let isShuttingDown = false;
+
 initErrorHandlers();
 if (cluster.isPrimary) {
+  process.once("SIGINT", () => {
+    shutdown();
+  });
+  process.once("SIGTERM", () => {
+    shutdown();
+  });
+
   Env.probeFilesSync();
   const container = makeContainer();
   Logger.info("Configuration", {
@@ -35,6 +44,7 @@ if (cluster.isPrimary) {
       process.title = "keybr server worker process";
       service.start({
         app: container.get(Application, kMain),
+        host: Env.getString("SERVER_HOST", ""),
         port: Env.getPort("SERVER_PORT", 3000),
       });
       break;
@@ -42,6 +52,7 @@ if (cluster.isPrimary) {
       process.title = "keybr game server worker process";
       service.start({
         app: container.get(Application, kGame),
+        host: Env.getString("SERVER_HOST", ""),
         port: Env.getPort("SERVER_PORT_WS", 3001),
       });
       container.get(Game).start();
@@ -65,6 +76,9 @@ function fork(settings: ClusterSettings) {
     Logger.info("Worker started", { pid: worker.process.pid });
   });
   worker.on("exit", (code, signal) => {
+    if (cluster.isPrimary && isShuttingDown) {
+      return;
+    }
     Logger.info("Worker died, starting a new worker", {
       pid: worker.process.pid,
       code,
@@ -72,6 +86,41 @@ function fork(settings: ClusterSettings) {
     });
     fork(settings); // Restart failed worker.
   });
+}
+
+function shutdown() {
+  if (!cluster.isPrimary || isShuttingDown) {
+    return;
+  }
+  isShuttingDown = true;
+  Logger.info("Stopping master process", { pid: process.pid });
+
+  let finished = false;
+  const finish = (exitCode: number) => {
+    if (!finished) {
+      finished = true;
+      process.exit(exitCode);
+    }
+  };
+
+  for (const worker of Object.values(cluster.workers ?? {})) {
+    if (worker != null && worker.isConnected()) {
+      worker.process.kill("SIGTERM");
+    }
+  }
+
+  cluster.disconnect(() => {
+    finish(0);
+  });
+
+  setTimeout(() => {
+    for (const worker of Object.values(cluster.workers ?? {})) {
+      if (worker != null) {
+        worker.process.kill("SIGKILL");
+      }
+    }
+    finish(0);
+  }, 5000).unref();
 }
 
 function initErrorHandlers() {

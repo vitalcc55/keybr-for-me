@@ -453,7 +453,11 @@ function Get-State {
     throw "Cannot verify launcher state hardlink ownership because fsutil.exe is unavailable."
   }
   $stateLinks = @(& $fsutilPath hardlink list $statePath 2>$null)
-  if ($LASTEXITCODE -ne 0 -or $stateLinks.Count -ne 1) {
+  $fsutilExitCode = $LASTEXITCODE
+  $fsutilUnsupported = $fsutilExitCode -eq 1 -and
+    (($stateLinks -join "`n") -match "(?i)^Error 50:")
+  if (-not $fsutilUnsupported -and
+      ($fsutilExitCode -ne 0 -or $stateLinks.Count -ne 1)) {
     throw "The launcher state path '$statePath' must not be a hardlink."
   }
   try {

@@ -16,8 +16,10 @@ import { type LessonState } from "./state/index.ts";
 
 export const Indicators = memo(function Indicators({
   state: { keyStatsMap, summaryStats, lessonKeys, streakList, dailyGoal },
+  showUnlockDescription = true,
 }: {
   readonly state: LessonState;
+  readonly showUnlockDescription?: boolean;
 }): ReactNode {
   type State = Readonly<
     | { type: "hidden" }
@@ -83,6 +85,7 @@ export const Indicators = memo(function Indicators({
             <KeyExtendedDetails
               lessonKey={state.key}
               keyStats={keyStatsMap.get(state.key.letter)}
+              showUnlockDescription={showUnlockDescription}
             />
           </Popup>
         </Portal>

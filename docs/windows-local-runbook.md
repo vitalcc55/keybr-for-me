@@ -20,6 +20,43 @@ npm ci
 
 Чистая установка обновляет Windows-обёртки `tstest` после изменений toolchain.
 
+## Локальный корпус английских предложений
+
+Большие файлы предложений намеренно не входят в GitHub: `.gitignore` исключает
+`packages/keybr-content-words/lib/data/sentences-en-ru.json` и его локальный
+файл attribution. В репозитории остаются importer, validator и небольшой
+manifest. Перед `compile`, `build` или запуском режима подготовьте эти файлы из
+одного и того же архива ManyThings; внешняя сеть после этого не используется.
+
+```powershell
+$sourceRoot = Join-Path $env:TEMP "keybr-english-sentences-source"
+$archive = Join-Path $sourceRoot "rus-eng.zip"
+$expanded = Join-Path $sourceRoot "expanded"
+$tsv = Join-Path $expanded "rus.txt"
+New-Item -ItemType Directory -Force -Path $expanded | Out-Null
+Invoke-WebRequest -Uri "https://www.manythings.org/anki/rus-eng.zip" -OutFile $archive
+Expand-Archive -LiteralPath $archive -DestinationPath $expanded -Force
+Get-FileHash -LiteralPath $archive -Algorithm SHA256
+Get-FileHash -LiteralPath $tsv -Algorithm SHA256
+
+node --enable-source-maps --import @keybr/tsl `
+  .\packages\keybr-generators\lib\generate-en-ru-sentences.ts `
+  --input "$tsv" --archive "$archive"
+node --enable-source-maps --import @keybr/tsl `
+  .\packages\keybr-generators\lib\generate-en-ru-sentences.ts `
+  --input "$tsv" --archive "$archive" --check
+```
+
+`--check` сравнивает JSON, attribution sidecar и manifest побайтно и ничего не
+записывает. Manifest фиксирует source/archive/TSV SHA-256, revision, counts,
+правила нормализации, лицензию и attribution; фактические значения проверяйте
+на том архиве, который использован для подготовки. Для текущей версии importer
+принимает только запись `rus.txt` из архива с SHA-256
+`1534e267976f43ae97e966d2ac9dc1e9128fdd0efdf08eceee21cd88ff20682c`; смена
+источника требует обновления контракта и версии корпуса. Если локальные generated
+файлы отсутствуют, `verify-keybr.ps1` останавливается на отдельном
+`sentences-corpus` preparation gate, а не объявляет проверку зелёной.
+
 ## Изолированная техническая проверка
 
 Не запускайте полный `npm test` против `.env` пользователя: серверные тесты
@@ -202,6 +239,7 @@ mandatory status кроме `passed` блокирует gate. `skipped` допу
    блокирует нужный loopback; record `offline-local-only` фиксирует allowlist и
    ожидаемые blocked third-party requests (CDN/OAuth/Paddle/analytics/external
    keybr), а также успешные local font/assets requests.
+
 7. Проверьте смену `RU personal → standard → personal` и `RU → EN → RU`, а
    также old/new manifest/model hashes на отдельной test copy. Не смешивайте
    эти records с рабочим профилем; сохраните их как `source-switch` и
@@ -218,7 +256,7 @@ mandatory status кроме `passed` блокирует gate. `skipped` допу
    принятый новый corpus version, в disposable-копии сначала согласованно
    обновите immutable personal constants и manifest, затем выполните
    `generate-personal`, `generate-personal-model`, `check-personal`, `npm run
-   build-dev` и снова снимите hashes. До запуска скопируйте baseline history
+build-dev` и снова снимите hashes. До запуска скопируйте baseline history
    только в новый test `DataRoot` через backup/restore procedure и сравните
    sanitized result-count/hash before/after. Запустите копию с новым
    `-DataRoot`, проверьте новый source/model и сохранение baseline history,
@@ -271,6 +309,7 @@ mandatory status кроме `passed` блокирует gate. `skipped` допу
    и `-shm`, если они существуют, затем запустите сервер с новым `$restoreRoot`
    и проверьте историю; record `backup-restore`. Реальный профиль не удаляйте
    и не перезаписывайте.
+
 9. Для `negative-launcher` отдельно зафиксируйте foreign service/занятый порт
    и ранний exit: launcher должен завершиться до provisioning, не менять
    sentinel/data root и не останавливать чужой процесс. После проверки верните

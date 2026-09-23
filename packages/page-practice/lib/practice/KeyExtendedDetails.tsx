@@ -11,9 +11,11 @@ import { LearningRateDescription } from "./LearningRateDescription.tsx";
 export function KeyExtendedDetails({
   lessonKey,
   keyStats,
+  showUnlockDescription = true,
 }: {
   readonly lessonKey: LessonKey;
   readonly keyStats: KeyStats;
+  readonly showUnlockDescription?: boolean;
 }): ReactNode {
   const { settings } = useSettings();
   const target = new Target(settings);
@@ -24,10 +26,12 @@ export function KeyExtendedDetails({
         <Key lessonKey={lessonKey} size="large" />
         <KeyDetails lessonKey={lessonKey} />
       </Box>
-      <LearningRateDescription
-        lessonKey={lessonKey}
-        learningRate={learningRate}
-      />
+      {showUnlockDescription && (
+        <LearningRateDescription
+          lessonKey={lessonKey}
+          learningRate={learningRate}
+        />
+      )}
       <KeyDetailsChart
         lessonKey={lessonKey}
         learningRate={learningRate}

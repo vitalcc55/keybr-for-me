@@ -5,6 +5,7 @@
   "type": "module",
   "main": "lib/index.ts",
   "dependencies": {
+    "@keybr/content": "*",
     "@keybr/content-words": "*",
     "@keybr/keyboard": "*",
     "@keybr/keyboard-io": "*",
@@ -23,6 +24,8 @@
     "generate-personal": "node --enable-source-maps --import @keybr/tsl ./lib/generate-personal.ts --export",
     "generate-personal-model": "node --enable-source-maps --import @keybr/tsl ./lib/generate-personal.ts --model",
     "check-personal": "node --enable-source-maps --import @keybr/tsl ./lib/generate-personal.ts --check",
+    "generate-sentences": "node --enable-source-maps --import @keybr/tsl ./lib/generate-en-ru-sentences.ts",
+    "check-sentences": "node --enable-source-maps --import @keybr/tsl ./lib/generate-en-ru-sentences.ts --check",
     "generate-languages": "tsnode ./lib/generate-languages.ts",
     "generate-layouts": "tsnode ./lib/generate-layouts.ts"
   }

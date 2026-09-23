@@ -1,5 +1,10 @@
 import { type KeyId } from "@keybr/keyboard";
-import { isLessonUnavailable, type LessonUnavailable } from "@keybr/lesson";
+import {
+  isLessonUnavailable,
+  isSentenceLessonText,
+  isSentenceMode,
+  type LessonUnavailable,
+} from "@keybr/lesson";
 import { names } from "@keybr/lesson-ui";
 import { Screen } from "@keybr/pages-shared";
 import { enumProp, Preferences } from "@keybr/settings";
@@ -13,6 +18,7 @@ import { TextArea } from "@keybr/textinput-ui";
 import { type Focusable, ViewContext, Zoomer } from "@keybr/widget";
 import { createRef, PureComponent, type ReactNode, useContext } from "react";
 import { LessonUnavailableMessage } from "../LessonUnavailableMessage.tsx";
+import { SentenceTranslation } from "../SentenceTranslation.tsx";
 import { Controls } from "./Controls.tsx";
 import { Indicators } from "./Indicators.tsx";
 import { DeferredKeyboardPresenter } from "./KeyboardPresenter.tsx";
@@ -101,6 +107,10 @@ export class Presenter extends PureComponent<Props, State> {
       handleHelp,
       handleTourClose,
     } = this;
+    const translation = isSentenceLessonText(state.generation) ? (
+      <SentenceTranslation pairs={state.generation.pairs} />
+    ) : null;
+    const showUnlockDescription = !isSentenceMode(state.settings);
     if (isLessonUnavailable(state.generation)) {
       return (
         <UnavailableScreen
@@ -141,6 +151,8 @@ export class Presenter extends PureComponent<Props, State> {
                 />
               </Zoomer>
             }
+            translation={translation}
+            showUnlockDescription={showUnlockDescription}
             tour={tour && <PracticeTour onClose={handleTourClose} />}
           />
         );
@@ -174,6 +186,8 @@ export class Presenter extends PureComponent<Props, State> {
                 />
               </Zoomer>
             }
+            translation={translation}
+            showUnlockDescription={showUnlockDescription}
           />
         );
       case View.Bare:
@@ -206,6 +220,7 @@ export class Presenter extends PureComponent<Props, State> {
                 />
               </Zoomer>
             }
+            translation={translation}
           />
         );
     }
@@ -328,6 +343,8 @@ function NormalLayout({
   toggledKeys,
   controls,
   textInput,
+  translation,
+  showUnlockDescription,
   tour,
 }: {
   readonly state: LessonState;
@@ -336,13 +353,16 @@ function NormalLayout({
   readonly toggledKeys: readonly string[];
   readonly controls: ReactNode;
   readonly textInput: ReactNode;
+  readonly translation: ReactNode;
+  readonly showUnlockDescription: boolean;
   readonly tour: ReactNode;
 }) {
   return (
     <Screen>
-      <Indicators state={state} />
+      <Indicators state={state} showUnlockDescription={showUnlockDescription} />
       <div id={names.textInput} className={styles.textInput_normal}>
         {textInput}
+        {translation}
       </div>
       <div id={names.keyboard} className={styles.keyboard}>
         <Zoomer id="Keyboard/Normal">
@@ -365,18 +385,23 @@ function CompactLayout({
   state,
   controls,
   textInput,
+  translation,
+  showUnlockDescription,
 }: {
   readonly state: LessonState;
   readonly focus: boolean;
   readonly depressedKeys: readonly string[];
   readonly controls: ReactNode;
   readonly textInput: ReactNode;
+  readonly translation: ReactNode;
+  readonly showUnlockDescription: boolean;
 }) {
   return (
     <Screen>
-      <Indicators state={state} />
+      <Indicators state={state} showUnlockDescription={showUnlockDescription} />
       <div id={names.textInput} className={styles.textInput_compact}>
         {textInput}
+        {translation}
       </div>
       {controls}
     </Screen>
@@ -387,17 +412,20 @@ function BareLayout({
   state,
   controls,
   textInput,
+  translation,
 }: {
   readonly state: LessonState;
   readonly focus: boolean;
   readonly depressedKeys: readonly string[];
   readonly controls: ReactNode;
   readonly textInput: ReactNode;
+  readonly translation: ReactNode;
 }) {
   return (
     <Screen>
       <div id={names.textInput} className={styles.textInput_bare}>
         {textInput}
+        {translation}
       </div>
       {controls}
     </Screen>

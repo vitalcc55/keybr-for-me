@@ -149,3 +149,25 @@ export class LessonKeys implements Iterable<LessonKey> {
     return this.#keys.get(codePoint) ?? null;
   }
 }
+
+export type ConfidenceMode = "current" | "best";
+
+export function findWeakestKey(
+  keys: readonly LessonKey[],
+  mode: ConfidenceMode,
+): LessonKey | null {
+  let weakest: LessonKey | null = null;
+  for (const key of keys) {
+    if (
+      weakest == null ||
+      confidenceOf(key, mode) < confidenceOf(weakest, mode)
+    ) {
+      weakest = key;
+    }
+  }
+  return weakest;
+}
+
+function confidenceOf(key: LessonKey, mode: ConfidenceMode): number {
+  return (mode === "current" ? key.confidence : key.bestConfidence) ?? 0;
+}

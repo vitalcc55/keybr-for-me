@@ -9,6 +9,10 @@ packages/*/.types/
 root/public/assets/
 root/lib/
 
+# Locally prepared sentence corpus (download and generate before running it)
+packages/keybr-content-words/lib/data/sentences-en-ru.json
+packages/keybr-content-words/lib/data/sentences-en-ru.attribution.json
+
 # Other
 node_modules/
 build/

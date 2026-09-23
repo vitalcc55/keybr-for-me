@@ -27,7 +27,12 @@ export function LessonUnavailableMessage({
   return (
     <Alert severity="info">
       <div>
-        {unavailable.reason === "empty-word-list" ? (
+        {unavailable.origin === "sentences" ? (
+          <FormattedMessage
+            id="lesson.unavailable.sentences"
+            defaultMessage="The local English sentence corpus has no usable pairs for the current keyboard and lesson settings."
+          />
+        ) : unavailable.reason === "empty-word-list" ? (
           <FormattedMessage
             id="lesson.unavailable.wordList"
             defaultMessage="The selected Word List has no usable words for the current keyboard and filters."

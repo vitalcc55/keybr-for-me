@@ -1,11 +1,11 @@
 import { keyboardProps, type KeyId } from "@keybr/keyboard";
 import {
   type DailyGoal,
+  getLessonText,
   isLessonUnavailable,
   Lesson,
   type LessonGenerationResult,
   type LessonKeys,
-  lessonProps,
 } from "@keybr/lesson";
 import {
   type KeyStatsMap,
@@ -68,7 +68,7 @@ export class LessonState {
 
   resetLesson() {
     if (this.textInput != null) {
-      this.#reset(this.textInput.text);
+      this.#reset(this.generation);
     }
   }
 
@@ -98,7 +98,10 @@ export class LessonState {
       this.suffix = [];
       return;
     }
-    const textInput = new TextInput(generation, this.textInputSettings);
+    const textInput = new TextInput(
+      getLessonText(generation),
+      this.textInputSettings,
+    );
     this.textInput = textInput;
     this.lines = textInput.lines;
     this.suffix = textInput.remaining.map(({ codePoint }) => codePoint);
@@ -107,7 +110,7 @@ export class LessonState {
   #makeResult(textInput: TextInput, timeStamp = Date.now()) {
     return Result.fromStats(
       this.settings.get(keyboardProps.layout),
-      this.settings.get(lessonProps.type).textType,
+      this.lesson.textType,
       timeStamp,
       makeStats(textInput.steps),
     );

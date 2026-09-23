@@ -65,6 +65,9 @@ function validateWordListLimit(value: unknown): asserts value is WordListLimit {
 
 export const lessonProps = {
   type: itemProp("lesson.type", LessonType.ALL, LessonType.GUIDED),
+  sentences: {
+    enabled: booleanProp("lesson.sentences.enabled", false),
+  } as const,
   length: numberProp("lesson.length", 0, { min: 0, max: 1 }),
   guided: {
     naturalWords: booleanProp("lesson.guided.naturalWords", true),

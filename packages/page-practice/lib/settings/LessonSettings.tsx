@@ -3,6 +3,7 @@ import {
   type CodeLesson,
   type CustomTextLesson,
   type GuidedLesson,
+  isSentenceMode,
   type Lesson,
   lessonProps,
   LessonType,
@@ -14,6 +15,7 @@ import { type Settings, useSettings } from "@keybr/settings";
 import { Tab, TabList } from "@keybr/widget";
 import { type ReactNode } from "react";
 import { useIntl } from "react-intl";
+import { SentenceModeSwitch } from "../SentenceModeSwitch.tsx";
 import { BooksLessonSettings } from "./lesson/BooksLessonSettings.tsx";
 import { CodeLessonSettings } from "./lesson/CodeLessonSettings.tsx";
 import { CustomTextLessonSettings } from "./lesson/CustomTextLessonSettings.tsx";
@@ -21,64 +23,74 @@ import { DailyGoalSettings } from "./lesson/DailyGoalSettings.tsx";
 import { GuidedLessonSettings } from "./lesson/GuidedLessonSettings.tsx";
 import { LessonPreview } from "./lesson/LessonPreview.tsx";
 import { NumbersLessonSettings } from "./lesson/NumbersLessonSettings.tsx";
+import { SentenceLessonSettings } from "./lesson/SentenceLessonSettings.tsx";
 import { WordListLessonSettings } from "./lesson/WordListLessonSettings.tsx";
 import { WordListSourceSettings } from "./lesson/WordListSourceSettings.tsx";
 
 export function LessonSettings(): ReactNode {
   const { formatMessage } = useIntl();
   const { settings, updateSettings } = useSettings();
+  const sentenceMode = isSentenceMode(settings);
   return (
     <>
-      <TabList
-        selectedIndex={LessonType.ALL.indexOf(settings.get(lessonProps.type))}
-        onSelect={(index) => {
-          updateSettings(
-            settings.set(lessonProps.type, LessonType.ALL.at(index)),
-          );
-        }}
-      >
-        <Tab
-          label={formatMessage({
-            id: "t_Guided_lessons",
-            defaultMessage: "Guided lessons",
-          })}
-        />
-        <Tab
-          label={formatMessage({
-            id: "t_Common_words",
-            defaultMessage: "Common words",
-          })}
-        />
-        <Tab
-          label={formatMessage({
-            id: "t_Books",
-            defaultMessage: "Books",
-          })}
-        />
-        <Tab
-          label={formatMessage({
-            id: "t_Custom_text",
-            defaultMessage: "Custom text",
-          })}
-        />
-        <Tab
-          label={formatMessage({
-            id: "t_Source_code",
-            defaultMessage: "Source code",
-          })}
-        />
-        <Tab
-          label={formatMessage({
-            id: "t_Numbers",
-            defaultMessage: "Numbers",
-          })}
-        />
-      </TabList>
-      <WordListSourceSettings lessonType={settings.get(lessonProps.type)} />
+      <SentenceModeSwitch />
+      {!sentenceMode && (
+        <>
+          <TabList
+            selectedIndex={LessonType.ALL.indexOf(
+              settings.get(lessonProps.type),
+            )}
+            onSelect={(index) => {
+              updateSettings(
+                settings.set(lessonProps.type, LessonType.ALL.at(index)),
+              );
+            }}
+          >
+            <Tab
+              label={formatMessage({
+                id: "t_Guided_lessons",
+                defaultMessage: "Guided lessons",
+              })}
+            />
+            <Tab
+              label={formatMessage({
+                id: "t_Common_words",
+                defaultMessage: "Common words",
+              })}
+            />
+            <Tab
+              label={formatMessage({
+                id: "t_Books",
+                defaultMessage: "Books",
+              })}
+            />
+            <Tab
+              label={formatMessage({
+                id: "t_Custom_text",
+                defaultMessage: "Custom text",
+              })}
+            />
+            <Tab
+              label={formatMessage({
+                id: "t_Source_code",
+                defaultMessage: "Source code",
+              })}
+            />
+            <Tab
+              label={formatMessage({
+                id: "t_Numbers",
+                defaultMessage: "Numbers",
+              })}
+            />
+          </TabList>
+          <WordListSourceSettings lessonType={settings.get(lessonProps.type)} />
+        </>
+      )}
+      {sentenceMode && <SentenceLessonSettings />}
       <LessonLoader>
         {(lesson) => (
           <>
-            {tabBody(settings, lesson)}
+            {!sentenceMode && tabBody(settings, lesson)}
             <LessonPreview lesson={lesson} />
             <DailyGoalSettings />
           </>

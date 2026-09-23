@@ -111,6 +111,7 @@ $env:PADDLE_PRICE_ID = "0"
 
 $records = [Collections.Generic.List[object]]::new()
 $script:verificationBlocked = $false
+$script:verificationBlockReason = $null
 $npm = $null
 $git = $null
 $commit = $null
@@ -137,6 +138,38 @@ function Add-Record {
   param([Parameter(Mandatory)]$Record)
 
   [void]$records.Add($Record)
+}
+
+function Test-SafeJsonInteger {
+  param($Value)
+
+  if ($null -eq $Value -or $Value -is [bool]) {
+    return $false
+  }
+  if ($Value -isnot [byte] -and $Value -isnot [sbyte] -and
+      $Value -isnot [int16] -and $Value -isnot [uint16] -and
+      $Value -isnot [int32] -and $Value -isnot [uint32] -and
+      $Value -isnot [int64] -and $Value -isnot [uint64] -and
+      $Value -isnot [single] -and $Value -isnot [double] -and
+      $Value -isnot [decimal]) {
+    return $false
+  }
+  $number = [double]$Value
+  return [double]::IsFinite($number) -and
+    [math]::Truncate($number) -eq $number -and
+    $number -ge 0 -and $number -le 9007199254740991
+}
+
+function Test-ManifestString {
+  param($Value, [Parameter(Mandatory)][string]$Expected)
+
+  return $Value -is [string] -and $Value -ceq $Expected
+}
+
+function Test-ManifestSha256 {
+  param($Value)
+
+  return $Value -is [string] -and $Value -cmatch '^[0-9a-f]{64}$'
 }
 
 function Get-WorktreeFingerprint {
@@ -215,6 +248,11 @@ function Invoke-Check {
   )
 
   if ($script:verificationBlocked) {
+    $blockedReason = if ($script:verificationBlockReason) {
+      $script:verificationBlockReason
+    } else {
+      "Verification stopped after an earlier command exceeded the timeout."
+    }
     Add-Record ([ordered]@{
         checkId = $CheckId
         issue = "#7"
@@ -223,14 +261,14 @@ function Invoke-Check {
         failureClass = "harness"
         mandatory = $true
         expected = "The command runs to completion within the verification timeout."
-        observed = "Skipped after an earlier command exceeded the timeout."
+        observed = "Skipped because verification is blocked: $blockedReason"
         command = "$Command $($Arguments -join ' ')".Trim()
         exitCode = $null
         durationMs = 0
         timeoutMs = $TimeoutSeconds * 1000
         artifactPath = $null
         traceability = "docs/personal-keybr-execplan.md:#7.1"
-        reason = "Verification stopped after a timed-out command."
+        reason = $blockedReason
       })
     return
   }
@@ -352,7 +390,7 @@ if ($toolchainError) {
       traceability = "docs/personal-keybr-execplan.md:#7.1"
       reason = $toolchainError
     })
-  foreach ($checkId in @("node-version", "corpus-model", "compile", "lint", "stylelint", "build-dev", "build", "test")) {
+  foreach ($checkId in @("node-version", "sentences-corpus", "corpus-model", "compile", "lint", "stylelint", "build-dev", "build", "test")) {
     Add-Record ([ordered]@{
         checkId = $checkId
         issue = "#7"
@@ -399,6 +437,136 @@ if ($toolchainError) {
       traceability = "docs/getting_started.md:7-15"
       reason = if ($nodeMajor -eq 24 -and $nodeExitCode -eq 0) { $null } else { "Node.js 24 is required and node --version must exit 0." }
     })
+
+  $sentenceDataPath = Join-Path $repoRoot "packages/keybr-content-words/lib/data/sentences-en-ru.json"
+  $sentenceAttributionPath = Join-Path $repoRoot "packages/keybr-content-words/lib/data/sentences-en-ru.attribution.json"
+  $sentenceManifestPath = Join-Path $repoRoot "packages/keybr-content-words/lib/data/sentences-en-ru.manifest.json"
+  $sentenceGateStopwatch = [Diagnostics.Stopwatch]::StartNew()
+  $sentenceAssetsPresent =
+    (Test-Path -LiteralPath $sentenceDataPath -PathType Leaf) -and
+    (Test-Path -LiteralPath $sentenceAttributionPath -PathType Leaf) -and
+    (Test-Path -LiteralPath $sentenceManifestPath -PathType Leaf)
+  $sentenceGateReason = $null
+  if ($sentenceAssetsPresent) {
+    try {
+      $sentenceManifest = Get-Content -LiteralPath $sentenceManifestPath -Raw | ConvertFrom-Json
+      $sentenceIntegerFields = @(
+        "schemaVersion", "corpusVersion", "inputByteLength", "listedPairCount",
+        "inputRowCount", "outputPairCount", "exactDuplicateCount",
+        "normalizedEnglishDuplicateCount", "attributionPairCount",
+        "rulesVersion", "generatorVersion"
+      )
+      $sentenceIntegerFieldsValid = $true
+      foreach ($field in $sentenceIntegerFields) {
+        if (-not (Test-SafeJsonInteger $sentenceManifest.$field)) {
+          $sentenceIntegerFieldsValid = $false
+          break
+        }
+      }
+      $sentenceRejectedValid =
+        $null -ne $sentenceManifest.rejected -and
+        $sentenceManifest.rejected -is [pscustomobject] -and
+        $sentenceManifest.rejected -isnot [array]
+      if ($sentenceRejectedValid) {
+        foreach ($property in $sentenceManifest.rejected.PSObject.Properties) {
+          if (-not (Test-SafeJsonInteger $property.Value)) {
+            $sentenceRejectedValid = $false
+            break
+          }
+        }
+      }
+      $sentenceManifestIdentityValid =
+        $sentenceIntegerFieldsValid -and
+        [int64]$sentenceManifest.schemaVersion -eq 1 -and
+        (Test-ManifestString $sentenceManifest.sourceId "manythings-rus-eng") -and
+        (Test-ManifestString $sentenceManifest.sourcePageUrl "https://www.manythings.org/anki/") -and
+        (Test-ManifestString $sentenceManifest.sourceArchiveUrl "https://www.manythings.org/anki/rus-eng.zip") -and
+        (Test-ManifestString $sentenceManifest.sourceUpdated "2026-02-13") -and
+        [int64]$sentenceManifest.corpusVersion -eq 1 -and
+        (Test-ManifestString $sentenceManifest.sourceEntryName "rus.txt") -and
+        (Test-ManifestString $sentenceManifest.sourceEncoding "utf-8") -and
+        ($sentenceManifest.sourceBom -is [bool] -and $sentenceManifest.sourceBom -eq $false) -and
+        (Test-ManifestSha256 $sentenceManifest.sourceTsvSha256) -and
+        (Test-ManifestString $sentenceManifest.sourceArchiveSha256 "1534e267976f43ae97e966d2ac9dc1e9128fdd0efdf08eceee21cd88ff20682c") -and
+        (Test-ManifestString $sentenceManifest.attributionFile "sentences-en-ru.attribution.json") -and
+        (Test-ManifestSha256 $sentenceManifest.attributionSha256) -and
+        (Test-ManifestSha256 $sentenceManifest.generatedSha256) -and
+        (Test-ManifestString $sentenceManifest.idPolicy "tatoeba:<english-attribution-id>") -and
+        (Test-ManifestString $sentenceManifest.license "CC BY 2.0 FR") -and
+        (Test-ManifestString $sentenceManifest.attribution "Data from www.manythings.org/anki and tatoeba.org") -and
+        $sentenceRejectedValid
+      if (-not $sentenceManifestIdentityValid) {
+        throw "Generated sentence manifest does not match the pinned corpus identity."
+      }
+      $sentenceDataHash = (Get-FileHash -LiteralPath $sentenceDataPath -Algorithm SHA256).Hash.ToLowerInvariant()
+      $sentenceAttributionHash = (Get-FileHash -LiteralPath $sentenceAttributionPath -Algorithm SHA256).Hash.ToLowerInvariant()
+      $sentenceRejectedCount = 0L
+      foreach ($property in $sentenceManifest.rejected.PSObject.Properties) {
+        $sentenceRejectedCount += [int64]$property.Value
+      }
+      $sentenceCountsValid =
+        [int64]$sentenceManifest.attributionPairCount -eq [int64]$sentenceManifest.outputPairCount -and
+        [int64]$sentenceManifest.outputPairCount +
+          [int64]$sentenceManifest.exactDuplicateCount +
+          [int64]$sentenceManifest.normalizedEnglishDuplicateCount +
+          $sentenceRejectedCount -eq [int64]$sentenceManifest.inputRowCount
+      if ([string]$sentenceManifest.generatedSha256 -cne $sentenceDataHash -or
+          [string]$sentenceManifest.attributionSha256 -cne $sentenceAttributionHash -or
+          -not $sentenceCountsValid) {
+        throw "Generated sentence asset hash does not match the tracked manifest."
+      }
+    } catch {
+      $sentenceGateReason = $_.Exception.Message
+    }
+  } else {
+    $sentenceGateReason = "The ignored sentence corpus is missing; run the ManyThings preparation and --check steps from docs/windows-local-runbook.md."
+  }
+  if ($sentenceGateReason) {
+    $sentenceGateStopwatch.Stop()
+    $script:verificationBlocked = $true
+    $script:verificationBlockReason = "Sentence corpus preparation failed: $sentenceGateReason"
+    Add-Record ([ordered]@{
+        checkId = "sentences-corpus"
+        issue = "#7"
+        status = "blocked"
+        evidenceType = "artifact"
+        failureClass = "harness"
+        mandatory = $true
+        expected = "Locally prepared sentence JSON, attribution sidecar, and manifest are present and match manifest hashes before compile/build."
+        observed = $sentenceGateReason
+        command = "Get-FileHash generated sentence assets; compare generatedSha256 and attributionSha256 from manifest"
+        exitCode = $null
+        durationMs = [int]$sentenceGateStopwatch.ElapsedMilliseconds
+        timeoutMs = $TimeoutSeconds * 1000
+        artifactPath = $null
+        traceability = "docs/windows-local-runbook.md:sentence-corpus"
+        reason = $script:verificationBlockReason
+      })
+  } else {
+    $sentenceGateStopwatch.Stop()
+    $sentenceSizes = @(
+      (Get-Item -LiteralPath $sentenceDataPath).Length,
+      (Get-Item -LiteralPath $sentenceAttributionPath).Length,
+      (Get-Item -LiteralPath $sentenceManifestPath).Length
+    )
+    Add-Record ([ordered]@{
+        checkId = "sentences-corpus"
+        issue = "#7"
+        status = "passed"
+        evidenceType = "artifact"
+        failureClass = "none"
+        mandatory = $true
+        expected = "Locally prepared sentence JSON, attribution sidecar, and manifest are present and match manifest hashes before compile/build."
+        observed = "Prepared local sentence artifacts match manifest hashes ($($sentenceSizes -join ', ') bytes)."
+        command = "Get-FileHash generated sentence assets; compare generatedSha256 and attributionSha256 from manifest"
+        exitCode = 0
+        durationMs = [int]$sentenceGateStopwatch.ElapsedMilliseconds
+        timeoutMs = 0
+        artifactPath = "packages/keybr-content-words/lib/data/sentences-en-ru.manifest.json"
+        traceability = "docs/windows-local-runbook.md:sentence-corpus"
+        reason = $null
+      })
+  }
 
   if ($nodeMajor -eq 24) {
     Invoke-Check "corpus-model" $npm @("--workspace", "@keybr/generators", "run", "check-personal")

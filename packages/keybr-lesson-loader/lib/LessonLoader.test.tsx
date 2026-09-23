@@ -6,12 +6,12 @@ import {
   Layout,
   loadKeyboard,
 } from "@keybr/keyboard";
-import { type GuidedLesson } from "@keybr/lesson";
+import { type GuidedLesson, lessonProps, SentenceLesson } from "@keybr/lesson";
 import { FakePhoneticModel, type PhoneticModel } from "@keybr/phonetic-model";
 import { PhoneticModelLoader } from "@keybr/phonetic-model-loader";
 import { FakeSettingsContext, Settings } from "@keybr/settings";
 import { render } from "@testing-library/react";
-import { includes } from "rich-assert";
+import { equal, includes } from "rich-assert";
 import { LessonLoader } from "./LessonLoader.tsx";
 
 test("load", async () => {
@@ -65,6 +65,38 @@ test("RU defaults to the personal word-list/model source", async () => {
   includes((await r.findByTitle("source")).textContent!, "ru-personal");
   includes((await r.findByTitle("last-word")).textContent!, "нёбо");
 
+  r.unmount();
+});
+
+test("loads the sentence lesson when the effective mode is enabled", async () => {
+  PhoneticModelLoader.loader = FakePhoneticModel.loader;
+  const keyboard = loadKeyboard(Layout.EN_US);
+  const settings = new Settings().set(lessonProps.sentences.enabled, true);
+  let loadCount = 0;
+
+  const r = render(
+    <FakeSettingsContext initialSettings={settings}>
+      <KeyboardContext.Provider value={keyboard}>
+        <LessonLoader
+          loadSentences={async () => {
+            loadCount++;
+            return [
+              { id: "tatoeba:1", en: "Hello world.", ru: "Привет, мир." },
+            ];
+          }}
+        >
+          {(lesson) => (
+            <span title="kind">
+              {lesson instanceof SentenceLesson ? "sentences" : "other"}
+            </span>
+          )}
+        </LessonLoader>
+      </KeyboardContext.Provider>
+    </FakeSettingsContext>,
+  );
+
+  equal((await r.findByTitle("kind")).textContent, "sentences");
+  equal(loadCount, 1);
   r.unmount();
 });
 

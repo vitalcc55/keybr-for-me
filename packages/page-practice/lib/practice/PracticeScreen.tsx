@@ -7,12 +7,14 @@ import { LoadingProgress } from "@keybr/pages-shared";
 import { type Result, useResults } from "@keybr/result";
 import { useSettings } from "@keybr/settings";
 import { useEffect, useMemo, useState } from "react";
+import { SentenceModeSwitch } from "../SentenceModeSwitch.tsx";
 import { Controller } from "./Controller.tsx";
 import { displayEvent, Progress } from "./state/index.ts";
 
 export function PracticeScreen() {
   return (
     <KeyboardProvider>
+      <SentenceModeSwitch />
       <LessonLoader>
         {(lesson) => <ProgressUpdater lesson={lesson} />}
       </LessonLoader>

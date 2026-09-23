@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "sourceId": "manythings-rus-eng",
+  "sourcePageUrl": "https://www.manythings.org/anki/",
+  "sourceArchiveUrl": "https://www.manythings.org/anki/rus-eng.zip",
+  "sourceUpdated": "2026-02-13",
+  "corpusVersion": 1,
+  "sourceEntryName": "rus.txt",
+  "sourceTsvSha256": "b8157301fbee25795c78c3955bed72b1793afc2655069750459c8956b92e2119",
+  "sourceArchiveSha256": "1534e267976f43ae97e966d2ac9dc1e9128fdd0efdf08eceee21cd88ff20682c",
+  "inputByteLength": 89182633,
+  "listedPairCount": 536124,
+  "inputRowCount": 536124,
+  "outputPairCount": 341135,
+  "exactDuplicateCount": 9,
+  "normalizedEnglishDuplicateCount": 194917,
+  "rejected": {
+    "english-not-basic": 60,
+    "english-too-long": 3
+  },
+  "attributionFile": "sentences-en-ru.attribution.json",
+  "attributionSha256": "8b4a58fd2993004275cfd05f9a0bbcbc94543dfb3a4ba506f92c7245808121b8",
+  "attributionPairCount": 341135,
+  "rulesVersion": 1,
+  "generatorVersion": 1,
+  "idPolicy": "tatoeba:<english-attribution-id>",
+  "license": "CC BY 2.0 FR",
+  "attribution": "Data from www.manythings.org/anki and tatoeba.org",
+  "sourceEncoding": "utf-8",
+  "sourceBom": false,
+  "generatedSha256": "2e56e094ccdabadcb08e3b35e48bac8ff6c94d11b17cb50e6661fe948f770cfc"
+}

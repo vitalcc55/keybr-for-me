@@ -33,6 +33,7 @@ test("render", async () => {
 
   isNotNull(r.queryByText("Lesson options"));
   isNotNull(r.queryByText("Lesson preview"));
+  isNotNull(r.queryByText("Use English sentence practice"));
 
   fireEvent.click(r.getByText("Typing"));
 

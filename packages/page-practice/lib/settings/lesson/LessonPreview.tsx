@@ -1,4 +1,9 @@
-import { isLessonUnavailable, type Lesson } from "@keybr/lesson";
+import {
+  getLessonText,
+  isLessonUnavailable,
+  isSentenceLessonText,
+  type Lesson,
+} from "@keybr/lesson";
 import { CurrentKeyRow, KeySetRow } from "@keybr/lesson-ui";
 import { LCG } from "@keybr/rand";
 import { makeKeyStatsMap, useResults } from "@keybr/result";
@@ -13,6 +18,7 @@ import { FieldSet } from "@keybr/widget";
 import { type ReactNode, useMemo } from "react";
 import { useIntl } from "react-intl";
 import { LessonUnavailableMessage } from "../../LessonUnavailableMessage.tsx";
+import { SentenceTranslation } from "../../SentenceTranslation.tsx";
 import * as styles from "./LessonPreview.module.less";
 
 export function LessonPreview({
@@ -44,12 +50,20 @@ export function LessonPreview({
           {isLessonUnavailable(generation) ? (
             <LessonUnavailableMessage unavailable={generation} />
           ) : (
-            <StaticText
-              settings={toTextDisplaySettings(settings)}
-              lines={
-                new TextInput(generation, toTextInputSettings(settings)).lines
-              }
-            />
+            <>
+              <StaticText
+                settings={toTextDisplaySettings(settings)}
+                lines={
+                  new TextInput(
+                    getLessonText(generation),
+                    toTextInputSettings(settings),
+                  ).lines
+                }
+              />
+              {isSentenceLessonText(generation) && (
+                <SentenceTranslation pairs={generation.pairs} />
+              )}
+            </>
           )}
         </div>
       </div>

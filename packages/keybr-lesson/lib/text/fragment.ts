@@ -17,7 +17,7 @@ export function generateFragment(
     readonly unavailable?: LessonUnavailable;
   } = {},
 ): LessonGenerationResult {
-  const length = 100 + Math.round(settings.get(lessonProps.length) * 100);
+  const length = lessonTextLength(settings);
   const words: string[] = [];
   let wordsLength = 0;
   while (true) {
@@ -36,4 +36,8 @@ export function generateFragment(
       }
     }
   }
+}
+
+export function lessonTextLength(settings: Settings): number {
+  return 100 + Math.round(settings.get(lessonProps.length) * 100);
 }

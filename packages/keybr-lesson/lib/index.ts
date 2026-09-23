@@ -9,6 +9,8 @@ export * from "./learningsession.ts";
 export * from "./lesson.ts";
 export * from "./lessontype.ts";
 export * from "./numbers.ts";
+export * from "./sentence-mode.ts";
+export * from "./sentences.ts";
 export * from "./settings.ts";
 export * from "./target.ts";
 export * from "./wordlist.ts";

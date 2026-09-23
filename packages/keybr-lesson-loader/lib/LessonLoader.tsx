@@ -1,6 +1,7 @@
-import { type WordListPolicy } from "@keybr/content";
+import { type SentencePair, type WordListPolicy } from "@keybr/content";
 import { loadContent } from "@keybr/content-books";
 import {
+  loadSentencePairs,
   loadWordList,
   resolveWordListDescriptor,
   resolveWordListPolicy,
@@ -12,10 +13,12 @@ import {
   CodeLesson,
   CustomTextLesson,
   GuidedLesson,
+  isSentenceMode,
   type Lesson,
   lessonProps,
   LessonType,
   NumbersLesson,
+  SentenceLesson,
   WordListLesson,
 } from "@keybr/lesson";
 import { LoadingProgress } from "@keybr/pages-shared";
@@ -28,12 +31,15 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 export function LessonLoader({
   children,
   fallback = <LoadingProgress />,
+  loadSentences = loadSentencePairs,
 }: {
   readonly children: (result: Lesson) => ReactNode;
   readonly fallback?: ReactNode;
+  readonly loadSentences?: () => Promise<readonly SentencePair[]>;
 }): ReactNode {
   const { settings, updateSettings } = useSettings();
   const lessonType = settings.get(lessonProps.type);
+  const sentenceMode = isSentenceMode(settings);
   const options = KeyboardOptions.from(settings);
   const { language } = options;
   const sourceResolution = useMemo(() => {
@@ -46,7 +52,7 @@ export function LessonLoader({
       return { error, policy: null };
     }
   }, [language, lessonType, settings]);
-  if (sourceResolution.error != null || sourceResolution.policy == null) {
+  if (sourceResolution.error != null) {
     return (
       <>
         <ErrorAlert
@@ -63,19 +69,21 @@ export function LessonLoader({
   }
   const sourcePolicy = sourceResolution.policy;
   const modelSource =
-    sourcePolicy.source === "ru-personal" ? "ru-personal" : "standard";
+    sourcePolicy?.source === "ru-personal" ? "ru-personal" : "standard";
   return (
     <PhoneticModelLoader
       language={language}
       source={modelSource}
-      sourceKey={sourcePolicy.identity}
+      sourceKey={sentenceMode ? "sentences-en-ru" : sourcePolicy?.identity}
     >
       {(model) => (
         <Loader
-          key={`${lessonType.id}:${language.id}:${options.layout.id}:${sourcePolicy.source}:${sourcePolicy.limit}:${sourcePolicy.identity ?? "legacy"}:${JSON.stringify(settings.toJSON())}`}
+          key={`${lessonType.id}:${language.id}:${options.layout.id}:${sourcePolicy?.source ?? "sentences"}:${sourcePolicy?.limit ?? "inherit"}:${sourcePolicy?.identity ?? "sentences-en-ru"}:${JSON.stringify(settings.toJSON())}`}
           language={language}
           model={model}
           policy={sourcePolicy}
+          sentenceMode={sentenceMode}
+          loadSentences={loadSentences}
           fallback={fallback}
         >
           {children}
@@ -89,16 +97,26 @@ function Loader({
   language,
   model,
   policy,
+  sentenceMode,
+  loadSentences,
   children,
   fallback,
 }: {
   readonly language: Language;
   readonly model: PhoneticModel;
-  readonly policy: WordListPolicy;
+  readonly policy: WordListPolicy | null;
+  readonly sentenceMode: boolean;
+  readonly loadSentences: () => Promise<readonly SentencePair[]>;
   readonly children: (result: Lesson) => ReactNode;
   readonly fallback?: ReactNode;
 }): ReactNode {
-  const [{ error, result }, retry] = useLoader(language, model, policy);
+  const [{ error, result }, retry] = useLoader(
+    language,
+    model,
+    policy,
+    sentenceMode,
+    loadSentences,
+  );
   if (error != null) {
     return (
       <>
@@ -117,7 +135,9 @@ function Loader({
 function useLoader(
   language: Language,
   model: PhoneticModel,
-  policy: WordListPolicy,
+  policy: WordListPolicy | null,
+  sentenceMode: boolean,
+  loadSentences: () => Promise<readonly SentencePair[]>,
 ) {
   const { settings } = useSettings();
   const keyboard = useKeyboard();
@@ -132,6 +152,19 @@ function useLoader(
     setState({ result: null, error: null });
 
     const load = async (): Promise<void> => {
+      if (sentenceMode) {
+        const pairs = await loadSentences();
+        if (!didCancel) {
+          setState({
+            error: null,
+            result: new SentenceLesson(settings, keyboard, model, pairs),
+          });
+        }
+        return;
+      }
+      if (policy == null) {
+        throw new Error("A word-list policy is required for a regular lesson.");
+      }
       switch (settings.get(lessonProps.type)) {
         case LessonType.GUIDED: {
           const wordList = await loadWordList(language, policy.source);
@@ -220,7 +253,16 @@ function useLoader(
     return () => {
       didCancel = true;
     };
-  }, [language, model, policy, retry, settings, keyboard]);
+  }, [
+    language,
+    model,
+    policy,
+    retry,
+    sentenceMode,
+    settings,
+    keyboard,
+    loadSentences,
+  ]);
 
   return [state, () => setRetry((value) => value + 1)] as const;
 }
@@ -229,7 +271,10 @@ function resolveSourcePolicy(
   settings: Settings,
   language: Language,
   lessonType: LessonType,
-): WordListPolicy {
+): WordListPolicy | null {
+  if (isSentenceMode(settings)) {
+    return null;
+  }
   const usesWordList =
     lessonType === LessonType.GUIDED || lessonType === LessonType.WORDLIST;
   if (!usesWordList || language !== Language.RU) {

@@ -5,7 +5,7 @@ import { type RNGStream } from "@keybr/rand";
 import { type KeyStatsMap } from "@keybr/result";
 import { type Settings } from "@keybr/settings";
 import { Dictionary, filterWordList } from "./dictionary.ts";
-import { LessonKey, LessonKeys } from "./key.ts";
+import { findWeakestKey, LessonKey, LessonKeys } from "./key.ts";
 import { Lesson, lessonUnavailable } from "./lesson.ts";
 import { lessonProps } from "./settings.ts";
 import { Target } from "./target.ts";
@@ -106,10 +106,13 @@ export class GuidedLesson extends Lesson {
     };
     const weakestKeys = lessonKeys
       .findIncludedKeys()
-      .filter((key) => confidenceOf(key) < 1)
-      .sort((a, b) => confidenceOf(a) - confidenceOf(b));
-    if (weakestKeys.length > 0) {
-      lessonKeys.focus(weakestKeys[0].letter);
+      .filter((key) => confidenceOf(key) < 1);
+    const weakestKey = findWeakestKey(
+      weakestKeys,
+      recoverKeys ? "current" : "best",
+    );
+    if (weakestKey != null) {
+      lessonKeys.focus(weakestKey.letter);
     }
 
     return lessonKeys;
